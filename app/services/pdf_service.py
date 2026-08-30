@@ -50,6 +50,9 @@ import os
 import io
 import json
 import html
+import tempfile
+
+from PIL import Image as PILImage
 
 from paths import resource_path
 
@@ -329,6 +332,45 @@ def _resolve_font():
     return FONT_REGULAR
 
 
+# Photos are only ever shown small in the PDF (≤ ~350 pt wide), but ReportLab
+# embeds whatever resolution it is handed — a 12 MP phone photo makes the render
+# slow and the file huge. ``_fit_image`` downsizes an image to roughly what the
+# page needs, once, writing a temp file the caller cleans up afterwards.
+_FIT_DPI = 220          # target pixel density inside the draw box
+_FIT_SLACK = 1.2        # skip the re-encode unless the source is >20 % oversized
+
+
+def _fit_image(path, max_w_pt, max_h_pt, cache, tmp_files):
+    """Return a path to `path` downscaled to fit (max_w_pt × max_h_pt) at
+    `_FIT_DPI`, or `path` unchanged when it is already small enough."""
+    if path in cache:
+        return cache[path]
+    result = path
+    try:
+        target_w = int(max_w_pt / 72.0 * _FIT_DPI)
+        target_h = int(max_h_pt / 72.0 * _FIT_DPI)
+        with PILImage.open(path) as im:
+            if im.width > target_w * _FIT_SLACK or im.height > target_h * _FIT_SLACK:
+                # draft() lets the JPEG decoder emit a smaller image directly —
+                # much faster than decoding full-res then resizing.
+                im.draft(None, (target_w, target_h))
+                im.thumbnail((target_w, target_h), PILImage.LANCZOS)
+                has_alpha = im.mode in ('RGBA', 'LA', 'PA') or (
+                    im.mode == 'P' and 'transparency' in im.info)
+                fd, tmp = tempfile.mkstemp(suffix='.png' if has_alpha else '.jpg')
+                os.close(fd)
+                if has_alpha:
+                    im.convert('RGBA').save(tmp, 'PNG', optimize=True)
+                else:
+                    im.convert('RGB').save(tmp, 'JPEG', quality=82, optimize=True)
+                tmp_files.append(tmp)
+                result = tmp
+    except Exception:
+        result = path
+    cache[path] = result
+    return result
+
+
 def generate_pdf(document_number, content_blocks, classification=None, unique_identifier='', revision_number=1,
                  signature_path=None, logo_left_path=None, logo_right_path=None, contact_details=None):
     """Render ``content_blocks`` to PDF bytes.
@@ -341,6 +383,9 @@ def generate_pdf(document_number, content_blocks, classification=None, unique_id
     """
     font_name = _resolve_font()
     font_bold = FONT_BOLD
+
+    img_cache = {}        # original path -> path actually embedded (maybe downscaled)
+    tmp_files = []        # temp downscaled images, deleted after the build
 
     buffer = io.BytesIO()
     doc = MyDocTemplate(buffer, pagesize=letter, rightMargin=72, leftMargin=72, topMargin=108, bottomMargin=90)
@@ -499,7 +544,6 @@ def generate_pdf(document_number, content_blocks, classification=None, unique_id
             if image_name:
                 caption_text += f" - {image_name}"
                 
-            img = Image(text)
             # Images are always centred on the full page width, regardless of the
             # block's indent level.
             total_printable_width = letter[0] - 144
@@ -507,8 +551,10 @@ def generate_pdf(document_number, content_blocks, classification=None, unique_id
             # Use sensible maximum bounds to prevent excessively huge images
             max_w = min(total_printable_width, 350)
             max_h = letter[1] / 4.0
-            
-            if img.drawWidth > max_w: 
+
+            img = Image(_fit_image(text, max_w, max_h, img_cache, tmp_files))
+
+            if img.drawWidth > max_w:
                 ratio = max_w / float(img.drawWidth)
                 img.drawWidth = max_w
                 img.drawHeight *= ratio
@@ -587,10 +633,11 @@ def generate_pdf(document_number, content_blocks, classification=None, unique_id
     if signature_path and os.path.exists(signature_path):
         story.append(Spacer(1, 0.8 * inch))
         try:
+            sig_src = _fit_image(signature_path, 2 * inch, inch, img_cache, tmp_files)
             block = [
                 HRFlowable(width=2.2 * inch, thickness=0.75, color=INK,
                            spaceAfter=4, hAlign='LEFT'),
-                Image(signature_path, width=2 * inch, height=1 * inch, hAlign='LEFT'),
+                Image(sig_src, width=2 * inch, height=1 * inch, hAlign='LEFT'),
                 Paragraph(html.escape(get_display("חתימה מאושרת")), ParagraphStyle(
                     name='Sig', fontName=font_bold, fontSize=10, textColor=MUTED,
                     alignment=TA_LEFT, spaceBefore=4)),
@@ -599,10 +646,23 @@ def generate_pdf(document_number, content_blocks, classification=None, unique_id
         except Exception:
             pass
 
-    doc.multiBuild(story, canvasmaker=lambda *args, **kwargs: NumberedCanvas(
-        *args, doc_number=document_number, font_name=font_name, font_bold=font_bold,
-        classification=classification, unique_identifier=unique_identifier, revision_number=revision_number,
-        logo_left_path=logo_left_path, logo_right_path=logo_right_path, contact_details=contact_details,
-        **kwargs))
+    # Cap the header logos too (they render on every page). ~1.4 in box keeps
+    # them crisp at the 0.62 in they are actually drawn.
+    lp = _fit_image(logo_left_path, 1.4 * inch, 1.4 * inch, img_cache, tmp_files) if logo_left_path else None
+    rp = _fit_image(logo_right_path, 1.4 * inch, 1.4 * inch, img_cache, tmp_files) if logo_right_path else None
+
+    try:
+        doc.multiBuild(story, canvasmaker=lambda *args, **kwargs: NumberedCanvas(
+            *args, doc_number=document_number, font_name=font_name, font_bold=font_bold,
+            classification=classification, unique_identifier=unique_identifier, revision_number=revision_number,
+            logo_left_path=lp, logo_right_path=rp, contact_details=contact_details,
+            **kwargs))
+    finally:
+        for f in tmp_files:
+            try:
+                os.remove(f)
+            except OSError:
+                pass
+
     buffer.seek(0)
     return buffer.getvalue()

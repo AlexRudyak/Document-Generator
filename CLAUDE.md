@@ -45,6 +45,14 @@ There is no build step for the front-end (vanilla JS/CSS served from
   `Document` columns (uploaded via `/api/upload` like the signature). When a side
   has no image, that header corner is left empty — no fallback. Right = the
   RTL-leading corner. `app/static/assets/logo{,2}.png` are only example images.
+- **Performance.** Two things dominate: (1) always reach the server on
+  `127.0.0.1`, never `localhost` — on some machines `localhost` → IPv6 `::1`
+  stalls ~2 s per request (run.py binds 127.0.0.1, the templates redirect
+  `localhost`→`127.0.0.1`, all docs use the literal). (2) Images: uploads are
+  capped to 2200 px on the longest edge (`_shrink_oversized` in routes.py) and
+  `pdf_service._fit_image` downsizes each image again to the actual draw box
+  before embedding — an image-heavy PDF is ~10x faster and ~15x smaller than
+  embedding raw photos. Keep both layers.
 - **Contact block.** `Document.contact_details` is a JSON array of
   `{"label", "value"}` rows. Rendered by `NumberedCanvas.draw_page_number` only
   on `self._pageNumber == 1`, left-aligned below the left logo. Blank rows are

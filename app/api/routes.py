@@ -219,11 +219,33 @@ def upload_file():
     filename = f"{uuid.uuid4()}_{safe_name}"
     filepath = os.path.abspath(os.path.join(upload_folder, filename))
     file.save(filepath)
+    _shrink_oversized(filepath)
 
     # ``filepath`` (absolute) is stored in the DB and read from disk by the PDF
     # engine. ``url`` is the browser-served path, used only for editor previews
     # (valid when uploads live under the static folder, i.e. running from source).
     return jsonify({"filepath": filepath, "url": upload_url(filename)}), 201
+
+
+_MAX_UPLOAD_EDGE = 2200  # px; uploads are only ever shown small in the PDF
+
+
+def _shrink_oversized(path):
+    """Downscale an uploaded image whose longest edge exceeds _MAX_UPLOAD_EDGE,
+    in place. One-time cost that keeps every later render (and preview) fast."""
+    try:
+        from PIL import Image
+        with Image.open(path) as im:
+            if max(im.size) <= _MAX_UPLOAD_EDGE:
+                return
+            im.draft(None, (_MAX_UPLOAD_EDGE, _MAX_UPLOAD_EDGE))
+            im.thumbnail((_MAX_UPLOAD_EDGE, _MAX_UPLOAD_EDGE), Image.LANCZOS)
+            fmt = im.format or ('PNG' if path.lower().endswith('.png') else 'JPEG')
+            if fmt == 'JPEG':
+                im = im.convert('RGB')
+            im.save(path, fmt)
+    except Exception:
+        pass  # leave the original in place if anything goes wrong
 
 
 def upload_url(filename):

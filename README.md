@@ -77,10 +77,12 @@ python -m venv .venv
 pip install -r requirements.txt
 cp .env.example .env          # then set SECRET_KEY
 
-python run.py                 # → http://localhost:5000
+python run.py                 # opens http://127.0.0.1:5000
 ```
 
-The SQLite schema is created on first run.
+The SQLite schema is created on first run. Use `127.0.0.1`, not `localhost` —
+on some systems `localhost` resolves to IPv6 first and every request stalls
+~2 s before falling back.
 
 <details>
 <summary>Running in production</summary>
@@ -136,7 +138,7 @@ Override paths with `DOCGEN_DATA_DIR`, `DOCGEN_UPLOAD_DIR`, or `HEBREW_FONT_PATH
 ### API
 
 ```bash
-curl -X POST http://localhost:5000/api/documents/generate \
+curl -X POST http://127.0.0.1:5000/api/documents/generate \
   -H 'Content-Type: application/json' \
   -d '{
         "content": [
