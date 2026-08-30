@@ -74,6 +74,12 @@ There is no build step for the front-end (vanilla JS/CSS served from
   can resolve page numbers. `NumberedCanvas` buffers page state and stamps
   headers/footers/`page X of N` only in `save()`, when the total is known. Do not
   try to collapse this to one pass.
+- **Deferred bookmarks.** Because `NumberedCanvas.showPage()` is deferred,
+  calling `canv.bookmarkPage()` during layout would bind every TOC/TOF
+  destination to page 1 (`_doc.thisPageRef()` never advances). Instead
+  `afterFlowable` records `(key, y)` per page in `canv._deferred_bookmarks`, and
+  `save()` calls `bookmarkPage()` one page at a time, just before emitting that
+  page. Keep these in sync if you touch either method.
 - **RTL rendering.** ReportLab has no BiDi support, so **every** user string is
   wrapped in `bidi.algorithm.get_display(...)` right before it goes into a
   `Paragraph`/`drawString`, and also `html.escape`d. `RTLTableOfContents` /

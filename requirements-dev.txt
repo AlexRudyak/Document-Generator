@@ -3,3 +3,4 @@
 
 pyinstaller==6.11.1
 waitress==3.0.2      # production-ish WSGI server used by the frozen build
+pymupdf==1.27.2.3  # tests: inspect generated PDFs

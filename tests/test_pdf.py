@@ -1,3 +1,6 @@
+import io
+
+import pytest
 from PIL import Image
 
 from app.services.pdf_service import generate_pdf
@@ -24,3 +27,21 @@ def test_large_image_is_downscaled_not_embedded_raw(tmp_path):
     assert pdf.startswith(b'%PDF-')
     # The single downscaled copy should be well under the source image size.
     assert len(pdf) < 700_000
+
+
+def test_toc_links_point_to_their_headings_not_page_one():
+    fitz = pytest.importorskip("fitz")  # pymupdf; skipped if not installed
+
+    blocks = [{"type": "title", "text": "T"}]
+    for i in range(4):
+        blocks.append({"type": "header", "text": f"Chapter {i + 1}", "level": 0})
+        blocks.append({"type": "paragraph", "text": "body " * 60})
+
+    doc = fitz.open(stream=generate_pdf("IT-1", blocks), filetype="pdf")
+    toc_links = [l for l in doc[1].get_links() if l.get("kind") == fitz.LINK_GOTO]
+    assert len(toc_links) == 4
+    target_pages = {l["page"] for l in toc_links}
+    # Each chapter starts on its own page — links must span several pages,
+    # not all collapse onto page 1 (the bug this guards against).
+    assert target_pages != {0}
+    assert len(target_pages) == 4

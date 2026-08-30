@@ -83,18 +83,27 @@ class NumberedCanvas(canvas.Canvas):
         self.contact_details = kwargs.pop('contact_details', None) or []
         canvas.Canvas.__init__(self, *args, **kwargs)
         self._saved_page_states = []
+        # {1-based page number: [(bookmark key, y), ...]}. Because showPage() is
+        # deferred, bookmarkPage() during layout would bind every destination to
+        # page 1 (`_doc.thisPageRef()` never advances). Instead the doc template
+        # records where each heading landed here, and we register the real
+        # destinations in save(), one page at a time, just before each page is
+        # emitted - so `thisPageRef()` is the correct page.
+        self._deferred_bookmarks = {}
 
     def showPage(self):
-        # Snapshot each page's state instead of flushing it, so the second pass
-        # in save() can stamp "page X of N" once the total N is known.
+        # Snapshot each page's state instead of flushing it, so save() can stamp
+        # "page X of N" once the total N is known.
         self._saved_page_states.append(dict(self.__dict__))
         self._startPage()
 
     def save(self):
         num_pages = len(self._saved_page_states)
-        for state in self._saved_page_states:
+        for page_no, state in enumerate(self._saved_page_states, start=1):
             self.__dict__.update(state)
             self.draw_page_number(num_pages)
+            for key, y in self._deferred_bookmarks.get(page_no, ()):
+                self.bookmarkPage(key, fit='XYZ', left=0, top=y, zoom=0)
             canvas.Canvas.showPage(self)
         canvas.Canvas.save(self)
 
@@ -178,13 +187,29 @@ class MyDocTemplate(SimpleDocTemplate):
         self.bookmark_counter = 0
         super(MyDocTemplate, self).beforeDocument()
 
+    def _flowable_top(self, flowable):
+        """Page-coordinate y a little above the flowable just laid out, so a TOC
+        link lands on the heading. ``frame._y`` is the cursor (bottom of the
+        flowable) in page coords; add the flowable height + a small margin."""
+        try:
+            y = self.frame._y + getattr(flowable, 'height', 0) + 20
+            return max(0.0, min(self.pagesize[1], y))
+        except Exception:
+            return self.pagesize[1] - 4
+
+    def _record_bookmark(self, key, flowable):
+        # Defer the real bookmarkPage() to NumberedCanvas.save() - see the note
+        # there. self.page is the page this flowable was drawn on.
+        self.canv._deferred_bookmarks.setdefault(self.page, []).append(
+            (key, self._flowable_top(flowable)))
+
     def afterFlowable(self, flowable):
         """Called by ReportLab after each flowable is laid out.
 
         For headings (style ``CustomHeader_<level>``, levels 0-2) and hidden image
-        captions (style ``Caption_Hidden``) we drop a named bookmark on the
-        current page and notify the TOC/TOF so it can render a linked entry on the
-        next layout pass.
+        captions (style ``Caption_Hidden``) we record a bookmark for the current
+        page and notify the TOC/TOF so it can render a linked entry on the next
+        layout pass.
         """
         if flowable.__class__.__name__ == 'Paragraph':
             if getattr(flowable, 'style', None) and flowable.style.name.startswith('CustomHeader'):
@@ -196,13 +221,13 @@ class MyDocTemplate(SimpleDocTemplate):
                     self.bookmark_counter += 1
                     text = flowable.getPlainText()
                     key = f"BM_{self.bookmark_counter}"
-                    self.canv.bookmarkPage(key, fit='XYZ', left=0, top=842, zoom=0)
+                    self._record_bookmark(key, flowable)
                     self.notify('TOCEntry', (level, text, self.page, key))
             elif getattr(flowable, 'style', None) and flowable.style.name == 'Caption_Hidden':
                 self.bookmark_counter += 1
                 text = flowable.getPlainText()
                 key = f"BM_{self.bookmark_counter}"
-                self.canv.bookmarkPage(key, fit='XYZ', left=0, top=842, zoom=0)
+                self._record_bookmark(key, flowable)
                 self.notify('TOFEntry', (0, text, self.page, key))
 
 from reportlab.pdfbase.pdfmetrics import stringWidth
