@@ -371,8 +371,31 @@ def _fit_image(path, max_w_pt, max_h_pt, cache, tmp_files):
     return result
 
 
+def _draw_watermark(canv, text, font_name):
+    """Big faint diagonal watermark, drawn at page start so content sits on top.
+
+    Uses a light grey fill rather than alpha transparency (which ReportLab does
+    not reliably emit), so it renders consistently in every viewer.
+    """
+    pw, ph = letter
+    disp = get_display(text)
+    size = 120
+    w = pdfmetrics.stringWidth(disp, font_name, size)
+    max_w = (pw ** 2 + ph ** 2) ** 0.5 * 0.60
+    if w > max_w:
+        size *= max_w / w
+    canv.saveState()
+    canv.setFillColor(colors.HexColor('#DBE0E8'))
+    canv.setFont(font_name, size)
+    canv.translate(pw / 2.0, ph / 2.0)
+    canv.rotate(45)
+    canv.drawCentredString(0, -size * 0.34, disp)
+    canv.restoreState()
+
+
 def generate_pdf(document_number, content_blocks, classification=None, unique_identifier='', revision_number=1,
-                 signature_path=None, logo_left_path=None, logo_right_path=None, contact_details=None):
+                 signature_path=None, logo_left_path=None, logo_right_path=None, contact_details=None,
+                 watermark=None):
     """Render ``content_blocks`` to PDF bytes.
 
     Parameters mirror the persisted ``Document`` row. ``content_blocks`` is the
@@ -651,8 +674,12 @@ def generate_pdf(document_number, content_blocks, classification=None, unique_id
     lp = _fit_image(logo_left_path, 1.4 * inch, 1.4 * inch, img_cache, tmp_files) if logo_left_path else None
     rp = _fit_image(logo_right_path, 1.4 * inch, 1.4 * inch, img_cache, tmp_files) if logo_right_path else None
 
+    wm = (watermark or '').strip()
+    on_page = (lambda canv, _doc: _draw_watermark(canv, wm, font_bold)) if wm else (lambda *a: None)
+
     try:
-        doc.multiBuild(story, canvasmaker=lambda *args, **kwargs: NumberedCanvas(
+        doc.multiBuild(story, onFirstPage=on_page, onLaterPages=on_page,
+                       canvasmaker=lambda *args, **kwargs: NumberedCanvas(
             *args, doc_number=document_number, font_name=font_name, font_bold=font_bold,
             classification=classification, unique_identifier=unique_identifier, revision_number=revision_number,
             logo_left_path=lp, logo_right_path=rp, contact_details=contact_details,

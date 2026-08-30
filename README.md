@@ -55,6 +55,7 @@ figure list and revision tracking.**
 | **Templates & history** | Save any layout as a reusable template; search every generated document by title, ID or content. |
 | **Custom logos** | Upload a left / right header logo per document (each optional, with a live placement preview); a blank side leaves that corner empty. |
 | **Contact block** | Optional user-defined `label: value` rows (phone, e-mail, address, …) rendered left-aligned in the **first-page** header, beneath the left logo. |
+| **Watermark** | Optional faint diagonal watermark on every page (defaults to `טיוטה`). |
 
 <sub>Tech: **Flask 3** (app‑factory + blueprint) · **Flask‑SQLAlchemy** (SQLite by default) · **marshmallow** · **ReportLab** + **python‑bidi** · vanilla‑JS front end, no build step · **pytest**.</sub>
 

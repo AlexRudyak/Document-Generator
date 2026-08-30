@@ -37,6 +37,8 @@ class Document(db.Model):
     logo_right_path = db.Column(db.String(255), nullable=True)
     # Optional first-page header contact block: JSON [{"label", "value"}, ...].
     contact_details = db.Column(db.Text, nullable=True)
+    # Optional diagonal watermark text drawn on every page (e.g. "טיוטה").
+    watermark = db.Column(db.String(60), nullable=True)
     content = db.Column(db.Text, nullable=False)  # JSON array of block dicts
     created_date = db.Column(db.DateTime, default=_utcnow)
 

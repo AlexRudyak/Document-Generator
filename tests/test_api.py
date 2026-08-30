@@ -83,6 +83,29 @@ def test_contact_details_blank_rows_dropped(client):
     assert client.get(f'/api/documents/{doc_id}').get_json()['contact_details'] == [{"label": "x", "value": ""}]
 
 
+def test_watermark_round_trip(client):
+    res = client.post('/api/documents/generate', json={
+        "content": [{"type": "header", "text": "H"}],
+        "watermark": "טיוטה",
+    })
+    assert res.status_code == 200
+    doc_id = client.get('/api/documents').get_json()[0]['id']
+    assert client.get(f'/api/documents/{doc_id}').get_json()['watermark'] == "טיוטה"
+
+
+def test_watermark_omitted_is_null(client):
+    client.post('/api/documents/generate', json={"content": [{"type": "header", "text": "H"}]})
+    doc_id = client.get('/api/documents').get_json()[0]['id']
+    assert client.get(f'/api/documents/{doc_id}').get_json()['watermark'] is None
+
+
+def test_watermark_rejects_html(client):
+    res = client.post('/api/documents/generate', json={
+        "content": [{"type": "header", "text": "H"}], "watermark": "<script>x</script>",
+    })
+    assert res.status_code == 400
+
+
 def test_contact_details_rejects_html(client):
     res = client.post('/api/documents/generate', json={
         "content": [{"type": "header", "text": "H"}],

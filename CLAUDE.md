@@ -53,6 +53,10 @@ There is no build step for the front-end (vanilla JS/CSS served from
   `pdf_service._fit_image` downsizes each image again to the actual draw box
   before embedding — an image-heavy PDF is ~10x faster and ~15x smaller than
   embedding raw photos. Keep both layers.
+- **Watermark.** `Document.watermark` (string, ≤60 chars) — a faint diagonal
+  watermark drawn on every page via the `onFirstPage`/`onLaterPages` hooks
+  (so it sits *behind* content), light grey rather than alpha (ReportLab does
+  not reliably emit fill alpha). Editor default is `טיוטה`.
 - **Contact block.** `Document.contact_details` is a JSON array of
   `{"label", "value"}` rows. Rendered by `NumberedCanvas.draw_page_number` only
   on `self._pageNumber == 1`, left-aligned below the left logo. Blank rows are

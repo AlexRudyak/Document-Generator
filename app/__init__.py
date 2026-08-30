@@ -63,6 +63,7 @@ def _apply_lightweight_migrations():
             'logo_left_path': 'VARCHAR(255)',
             'logo_right_path': 'VARCHAR(255)',
             'contact_details': 'TEXT',
+            'watermark': 'VARCHAR(60)',
         },
     }
     inspector = inspect(db.engine)

@@ -47,4 +47,6 @@ class DocumentSchema(Schema):
     logo_right_path = fields.String(required=False, allow_none=True)
     contact_details = fields.List(fields.Nested(ContactRowSchema), required=False,
                                   allow_none=True, load_default=None)
+    watermark = fields.String(required=False, allow_none=True, load_default=None,
+                              validate=_reject_html)
     custom_doc_id = fields.String(required=False, allow_none=True)
