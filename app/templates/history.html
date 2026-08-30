@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>היסטוריית מסמכים</title>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        body { font-family: 'Heebo', sans-serif; background-color: #f8fafc; color: #334155; margin: 0; padding: 20px; }
+        .container { max-width: 1100px; margin: 20px auto; padding: 40px; background: #ffffff; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.03); }
+        .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 2px solid #f1f5f9; padding-bottom: 20px; }
+        .header-row h1 { margin: 0; font-size: 32px; color: #1e293b; }
+        
+        /* Modern Buttons */
+        .btn-modern { 
+            padding: 10px 20px; 
+            border-radius: 8px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            text-decoration: none; 
+            transition: all 0.2s; 
+            background: #e2e8f0; 
+            color: #475569; 
+            border: none;
+            display: inline-flex;
+            align-items: center;
+        }
+        .btn-modern:hover { background: #cbd5e1; }
+
+        /* Modern Search Input */
+        .search-container { position: relative; margin-bottom: 30px; }
+        .search-container input {
+            width: 100%;
+            padding: 18px 24px;
+            font-size: 18px;
+            font-family: 'Heebo', sans-serif;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            background: #f8fafc;
+            color: #1e293b;
+            box-sizing: border-box;
+            transition: all 0.2s ease;
+        }
+        .search-container input:focus {
+            border-color: #3b82f6;
+            outline: none;
+            background: #ffffff;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+        }
+
+        /* Modern Table */
+        .history-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .history-table th { background-color: #f1f5f9; padding: 16px; text-align: right; color: #64748b; font-weight: 600; border-bottom: 2px solid #e2e8f0; }
+        .history-table td { padding: 16px; border-bottom: 1px solid #e2e8f0; font-size: 16px; }
+        .history-table tr { transition: background-color 0.15s; }
+        .history-table tr:hover { background-color: #f8fafc; cursor: pointer; }
+
+        /* Badges */
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; }
+        .badge-id { background: #e0f2fe; color: #0284c7; }
+        .badge-rev { background: #fef3c7; color: #d97706; }
+        .badge-date { background: #f1f5f9; color: #64748b; }
+        
+        .no-results { text-align: center; padding: 40px; color: #94a3b8; font-size: 18px; font-weight: 600; }
+        
+        /* Flex Alignment */
+        .flex-col { display: flex; flex-direction: column; gap: 4px; }
+        .text-sm { font-size: 14px; color: #64748b; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-row">
+            <h1>היסטוריית מסמכים</h1>
+            <a href="/" class="btn-modern">&rarr; חזרה לעורך</a>
+        </div>
+
+        <div class="search-container">
+            <input type="text" id="search-input" placeholder="חיפוש לפי שם מסמך, מזהה (UID), או תוכן...">
+        </div>
+
+        <table class="history-table">
+            <thead>
+                <tr>
+                    <th width="40%">שם המסמך</th>
+                    <th width="20%">מזהה ייחודי (UID)</th>
+                    <th width="15%">מספר מהדורה</th>
+                    <th width="25%">תאריך עדכון</th>
+                </tr>
+            </thead>
+            <tbody id="history-tbody">
+                <!-- Dynamically populated -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        let searchTimeout = null;
+
+        function renderDocuments(docs) {
+            const tbody = document.getElementById('history-tbody');
+            tbody.innerHTML = '';
+
+            if (docs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4"><div class="no-results">לא נמצאו מסמכים תואמים.</div></td></tr>';
+                return;
+            }
+
+            docs.forEach(doc => {
+                const tr = document.createElement('tr');
+                tr.onclick = () => {
+                    window.location.href = `/?doc_id=${doc.id}`;
+                };
+
+                // The list API already extracts the title from the content JSON.
+                const docTitle = doc.title || doc.document_number;
+                const dateStr = doc.created_date
+                    ? new Date(doc.created_date).toLocaleString('he-IL')
+                    : '---';
+
+                tr.innerHTML = `
+                    <td>
+                        <div class="flex-col">
+                            <strong style="color: #0f172a;">${docTitle}</strong>
+                            <span class="text-sm">מספר סידורי: ${doc.document_number}</span>
+                        </div>
+                    </td>
+                    <td>
+                        ${doc.unique_identifier ? `<span class="badge badge-id">${doc.unique_identifier}</span>` : '<span class="text-sm">---</span>'}
+                    </td>
+                    <td><span class="badge badge-rev">Rev ${doc.revision_number}</span></td>
+                    <td><span class="badge badge-date">${dateStr}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function fetchDocuments(query = '') {
+            fetch(`/api/documents?q=${encodeURIComponent(query)}`)
+                .then(res => res.json())
+                .then(data => renderDocuments(data))
+                .catch(err => console.error("Failed to load documents:", err));
+        }
+
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                fetchDocuments(e.target.value.trim());
+            }, 300);
+        });
+
+        // Initial Load
+        fetchDocuments();
+    </script>
+</body>
+</html>

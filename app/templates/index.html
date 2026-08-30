@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מחולל מסמכים</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>מחולל מסמכים</h1>
+        
+        <div class="toolbar">
+            <button id="save-template-btn" class="btn-secondary">שמור כתבנית</button>
+            <select id="template-select">
+                <option value="">-- טען תבנית --</option>
+            </select>
+            <a href="/history" class="btn-secondary" style="text-decoration: none;">📄 היסטוריית מסמכים</a>
+        </div>
+
+        <div id="document-title-container" style="margin-bottom: 20px;">
+            <label for="doc-title" style="font-weight: bold; display: block; margin-bottom: 5px;">כותרת המסמך:</label>
+            <input type="text" id="doc-title" class="block-input" style="width: 100%; box-sizing: border-box; font-size: 1.2em; font-weight: bold;" placeholder="הזן כאן כותרת למסמך...">
+
+            <label for="custom-doc-id" style="font-weight: bold; display: block; margin-top: 15px; margin-bottom: 5px;">מזהה מסמך (אופציונלי):</label>
+            <input type="text" id="custom-doc-id" class="block-input" style="width: 100%; box-sizing: border-box;" placeholder="השאר ריק למזהה אוטומטי (IT-XXX-תאריך)...">
+        </div>
+
+        <div id="revision-alert" style="display: none; background: #fff3cd; color: #856404; padding: 10px; border-radius: 5px; margin-bottom: 20px; font-weight: bold;">
+            שים לב: אתה עורך מסמך קיים. שמירה תיצור מהדורה חדשה (Revision).
+        </div>
+
+        <div id="blocks-container">
+            <!-- Blocks will be added here dynamically -->
+        </div>
+
+        <div class="toolbar" style="margin-bottom: 20px;">
+            <button id="add-header-btn" class="btn-primary">+ הוסף כותרת</button>
+            <button id="add-paragraph-btn" class="btn-primary">+ הוסף פסקה</button>
+            <button id="add-table-btn" class="btn-primary">+ הוסף טבלה</button>
+            <button id="add-list-btn" class="btn-primary">+ הוסף תבליטים</button>
+            <button id="add-ordered-list-btn" class="btn-primary">+ הוסף רשימה ממוספרת</button>
+            <button id="add-image-btn" class="btn-primary">+ הוסף תמונה</button>
+        </div>
+
+        <div class="settings-panel">
+            <h3 class="settings-title">הגדרות מסמך</h3>
+            <div class="settings-grid">
+
+                <div class="setting">
+                    <label class="toggle">
+                        <input type="checkbox" id="classify-toggle">
+                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                        <span class="toggle-label">סיווג מסמך</span>
+                    </label>
+                    <div class="setting-control" id="classify-control" hidden>
+                        <select id="doc-classification">
+                            <option value="בלמ&quot;ס">בלמ"ס</option>
+                            <option value="שמור">שמור</option>
+                            <option value="סודי">סודי</option>
+                            <option value="סודי ביותר">סודי ביותר</option>
+                            <option value="שותף סוד">שותף סוד</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="setting">
+                    <label class="toggle">
+                        <input type="checkbox" id="sig-toggle">
+                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                        <span class="toggle-label">חתימה</span>
+                    </label>
+                    <div class="setting-control" id="sig-control" hidden>
+                        <input type="file" id="doc-signature" accept="image/*" class="file-input">
+                        <label for="doc-signature" class="file-btn">בחר קובץ…</label>
+                        <span class="file-name" id="signature-status"></span>
+                        <input type="hidden" id="signature-path" value="">
+                    </div>
+                </div>
+
+                <div class="setting">
+                    <label class="toggle">
+                        <input type="checkbox" id="logo-right-toggle">
+                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                        <span class="toggle-label">לוגו ימני</span>
+                    </label>
+                    <div class="logo-preview" title="הלוגו ייראה בפינה הימנית של כותרת המסמך">
+                        <div class="lp-page">
+                            <span class="lp-corner lp-left"></span>
+                            <span class="lp-corner lp-right lp-target" id="logo-right-thumb"></span>
+                            <span class="lp-rule"></span><span class="lp-lines"></span>
+                        </div>
+                        <span class="lp-caption">פינה ימנית</span>
+                    </div>
+                    <div class="setting-control" id="logo-right-control" hidden>
+                        <input type="file" id="doc-logo-right" accept="image/*" class="file-input">
+                        <label for="doc-logo-right" class="file-btn">בחר קובץ…</label>
+                        <span class="file-name" id="logo-right-status"></span>
+                        <input type="hidden" id="logo-right-path" value="">
+                    </div>
+                </div>
+
+                <div class="setting">
+                    <label class="toggle">
+                        <input type="checkbox" id="logo-left-toggle">
+                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                        <span class="toggle-label">לוגו שמאלי</span>
+                    </label>
+                    <div class="logo-preview" title="הלוגו ייראה בפינה השמאלית של כותרת המסמך">
+                        <div class="lp-page">
+                            <span class="lp-corner lp-left lp-target" id="logo-left-thumb"></span>
+                            <span class="lp-corner lp-right"></span>
+                            <span class="lp-rule"></span><span class="lp-lines"></span>
+                        </div>
+                        <span class="lp-caption">פינה שמאלית</span>
+                    </div>
+                    <div class="setting-control" id="logo-left-control" hidden>
+                        <input type="file" id="doc-logo-left" accept="image/*" class="file-input">
+                        <label for="doc-logo-left" class="file-btn">בחר קובץ…</label>
+                        <span class="file-name" id="logo-left-status"></span>
+                        <input type="hidden" id="logo-left-path" value="">
+                    </div>
+                </div>
+
+                <div class="setting setting-wide">
+                    <label class="toggle">
+                        <input type="checkbox" id="contact-toggle">
+                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                        <span class="toggle-label">פרטי קשר</span>
+                    </label>
+                    <div class="setting-control setting-control--stack" id="contact-control" hidden>
+                        <p class="setting-hint">מופיע בכותרת העמוד הראשון בלבד, מיושר לשמאל מתחת ללוגו השמאלי.</p>
+                        <div class="contact-rows" id="contact-rows"></div>
+                        <button type="button" class="contact-add" id="contact-add">+ הוסף שורה</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="generate-btn-container">
+            <button id="generate-btn" class="btn-success">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+                צור מסמך PDF ⬇️
+            </button>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
