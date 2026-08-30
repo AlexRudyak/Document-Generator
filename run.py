@@ -20,6 +20,7 @@ except ImportError:
     pass
 
 from app import create_app
+from paths import version
 
 app = create_app()
 
@@ -45,7 +46,7 @@ if __name__ == '__main__':
 
         url = f'http://127.0.0.1:{port}/'
         threading.Timer(1.5, lambda: webbrowser.open(url)).start()
-        print(f'Document Generator running at {url}  (close this window to quit)')
+        print(f'Document Generator {version()} running at {url}  (close this window to quit)')
         _serve('127.0.0.1', port)
     else:
         debug = os.environ.get('FLASK_DEBUG', '1') == '1'

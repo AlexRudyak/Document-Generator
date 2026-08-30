@@ -29,6 +29,15 @@ def _project_root() -> str:
     return os.path.abspath(os.path.dirname(__file__))
 
 
+def version() -> str:
+    """The app version, read from the bundled ``VERSION`` file."""
+    try:
+        with open(resource_path("VERSION"), encoding="utf-8") as fh:
+            return fh.read().strip()
+    except OSError:
+        return "0.0.0"
+
+
 def resource_path(*parts: str) -> str:
     """Absolute path to a bundled, read-only resource.
 

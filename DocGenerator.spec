@@ -12,6 +12,7 @@ the default browser. User data (SQLite DB + uploads) is stored per-user under
 from PyInstaller.utils.hooks import collect_all
 
 datas = [
+    ('VERSION', '.'),
     ('app/templates', 'app/templates'),
     ('app/static/css', 'app/static/css'),
     ('app/static/js', 'app/static/js'),
