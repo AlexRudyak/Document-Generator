@@ -45,3 +45,19 @@ def test_toc_links_point_to_their_headings_not_page_one():
     # not all collapse onto page 1 (the bug this guards against).
     assert target_pages != {0}
     assert len(target_pages) == 4
+
+
+def test_rtl_markup_keeps_line_order_and_bidi():
+    from app.services.pdf_service import rtl_markup
+
+    # Hard newlines stay separate and in order (not reversed / merged).
+    m = rtl_markup("אלכס המלך\nאלכס הקינג")
+    parts = m.split("<br/>")
+    assert len(parts) == 2
+    # Each segment corresponds to its logical line, BiDi-reordered.
+    from bidi.algorithm import get_display
+    assert parts[0] == get_display("אלכס המלך", base_dir="R")
+    assert parts[1] == get_display("אלכס הקינג", base_dir="R")
+
+    # A mixed line is reordered as one visual line (no <br/> inserted).
+    assert "<br/>" not in rtl_markup("שלום world שלום")

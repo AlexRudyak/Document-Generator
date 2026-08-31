@@ -218,7 +218,7 @@ In‑memory SQLite, no network or external services required.
 - **No authentication / CSRF protection** — deploy behind an authenticating proxy or VPN.
 - The revision diff is **positional**: inserting a block near the top marks everything below it as changed.
 - SQLite by default; the document‑number counter relies on a single‑row atomic `UPDATE`.
-- `python-bidi` reorders RTL text **before** line‑breaking, so a paragraph that wraps across many lines can have slightly imperfect line order. Headings and short paragraphs are unaffected.
+- Text is greedily wrapped and BiDi‑reordered per line, so hard newlines and mixed Hebrew/English render in the right order. A single long word or a very wide table cell can still overflow, since cell widths aren't known before layout.
 
 ---
 

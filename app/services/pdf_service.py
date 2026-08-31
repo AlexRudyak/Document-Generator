@@ -70,6 +70,51 @@ BAND_BG      = colors.HexColor('#0F172A')   # classification band
 ZEBRA        = colors.HexColor('#F8FAFC')   # alternating table row
 HIGHLIGHT    = colors.HexColor('#FEF08A')   # revision-change highlight
 
+
+# --- Right-to-left text -----------------------------------------------------
+# ReportLab has no BiDi support and applies no reordering of its own, so we must
+# hand it text that is already in *visual* order. python-bidi does that, but it
+# must run **per visual line** with a fixed RTL base direction: running it over a
+# whole multi-line / wrapping paragraph reverses the line order and mangles
+# mixed Hebrew/English. So: split on hard newlines, greedily wrap each line to
+# the available width using real font metrics, BiDi-reorder every resulting
+# line, and join them back with <br/>.
+
+def _wrap_line(line, font_name, font_size, max_width):
+    """Greedy word wrap of a single logical line to ``max_width`` points."""
+    words, out, cur = line.split(' '), [], ''
+    for w in words:
+        trial = f"{cur} {w}".strip()
+        if cur and pdfmetrics.stringWidth(trial, font_name, font_size) > max_width:
+            out.append(cur)
+            cur = w
+        else:
+            cur = trial
+    out.append(cur)
+    return out
+
+
+def rtl_markup(text, font_name=None, font_size=None, max_width=None):
+    """User text -> ReportLab paragraph markup, correct for RTL + mixed script.
+
+    Pass ``font_name``/``font_size``/``max_width`` to pre-wrap long lines (use it
+    for body paragraphs and list items); omit them for short one-liners
+    (headings, titles, table cells, captions).
+    """
+    pieces = []
+    for logical_line in str(text).split('\n'):
+        if not logical_line:
+            pieces.append('')
+            continue
+        if max_width and font_name and font_size:
+            visual_lines = _wrap_line(logical_line, font_name, font_size, max_width)
+        else:
+            visual_lines = [logical_line]
+        for vl in visual_lines:
+            pieces.append(html.escape(get_display(vl, base_dir='R')) if vl else '')
+    return '<br/>'.join(pieces) or ' '
+
+
 class NumberedCanvas(canvas.Canvas):
     def __init__(self, *args, **kwargs):
         self.doc_number = kwargs.pop('doc_number', 'IT-000-00000000')
@@ -451,7 +496,7 @@ def generate_pdf(document_number, content_blocks, classification=None, unique_id
     def section_heading(label):
         """A right-aligned section title with a thin accent rule beneath it."""
         return [
-            Paragraph(html.escape(get_display(label)), section_heading_style),
+            Paragraph(rtl_markup(label), section_heading_style),
             HRFlowable(width="100%", thickness=1, color=ACCENT, spaceBefore=1,
                        spaceAfter=14, hAlign='RIGHT'),
         ]
@@ -467,7 +512,7 @@ def generate_pdf(document_number, content_blocks, classification=None, unique_id
     story.append(Spacer(1, 1.7 * inch))
     story.append(HRFlowable(width=64, thickness=3, color=ACCENT, spaceAfter=22, hAlign='CENTER'))
     if title_block:
-        story.append(Paragraph(html.escape(get_display(title_block.get("text"))), title_style))
+        story.append(Paragraph(rtl_markup(title_block.get("text"), font_bold, 30, 430), title_style))
     story.append(Spacer(1, 10))
     # Build the meta line in logical order and reorder once, so the mixed
     # Hebrew / Latin / digit run stays readable.
@@ -477,7 +522,7 @@ def generate_pdf(document_number, content_blocks, classification=None, unique_id
         _dt.now().strftime('%d/%m/%Y'),
         classification,
     ] if p])
-    story.append(Paragraph(html.escape(get_display(cover_meta)), subtitle_style))
+    story.append(Paragraph(rtl_markup(cover_meta), subtitle_style))
     story.append(PageBreak())
 
     # --- Table of Contents (only if the document actually has headings) ---
@@ -554,7 +599,7 @@ def generate_pdf(document_number, content_blocks, classification=None, unique_id
                 if is_highlighted:
                     style.backColor = HIGHLIGHT
                     style.borderPadding = (3, 6, 3, 6)
-            head = Paragraph(html.escape(get_display(f"{numbering} {text}")), style)
+            head = Paragraph(rtl_markup(f"{numbering} {text}", font_bold, style.fontSize, 430), style)
             if level == 2:
                 # Small accent underline for level-2 headings.
                 story.append(KeepTogether([
@@ -567,20 +612,22 @@ def generate_pdf(document_number, content_blocks, classification=None, unique_id
         elif b_type == "paragraph":
             # Body text starts at the same right margin as the headings (no
             # per-level indent); the hierarchy is carried by the heading above it.
-            story.append(Paragraph(html.escape(get_display(text)), ParagraphStyle(
+            # Text is pre-wrapped + BiDi'd per line (rtl_markup), so it is already
+            # in visual order — no wordWrap='RTL' (that would re-reorder it).
+            story.append(Paragraph(rtl_markup(text, font_name, 11, 458), ParagraphStyle(
                 f'CustomPara_{level}', fontName=font_name, fontSize=11, spaceAfter=10,
-                leading=16.5, alignment=TA_JUSTIFY, wordWrap='RTL', textColor=INK,
+                leading=16.5, alignment=TA_RIGHT, textColor=INK,
                 rightIndent=0, backColor=bg_color,
                 borderPadding=(2, 3, 2, 3) if bg_color else 0)))
         elif b_type == "list_unordered":
-            story.append(Paragraph(html.escape(get_display(f"•  {text}")), ParagraphStyle(
+            story.append(Paragraph(rtl_markup(f"•  {text}", font_name, 11, 452), ParagraphStyle(
                 f'CustomList_{level}', fontName=font_name, fontSize=11, spaceAfter=5,
                 leading=16, alignment=TA_RIGHT, textColor=INK,
                 rightIndent=0, backColor=bg_color)))
         elif b_type == "list_ordered":
             if last_type != "list_ordered": ordered_list_count = 1
             else: ordered_list_count += 1
-            story.append(Paragraph(html.escape(get_display(f"{ordered_list_count}.  {text}")), ParagraphStyle(
+            story.append(Paragraph(rtl_markup(f"{ordered_list_count}.  {text}", font_name, 11, 452), ParagraphStyle(
                 f'CustomListOrd_{level}', fontName=font_name, fontSize=11, spaceAfter=5,
                 leading=16, alignment=TA_RIGHT, textColor=INK,
                 rightIndent=0, backColor=bg_color)))
@@ -622,11 +669,11 @@ def generate_pdf(document_number, content_blocks, classification=None, unique_id
                 ('RIGHTPADDING', (0,0), (-1,-1), 0),
             ]))
 
-            caption_p = Paragraph(html.escape(get_display(caption_text)), ParagraphStyle(
+            caption_p = Paragraph(rtl_markup(caption_text), ParagraphStyle(
                 'Caption', fontName=font_name, fontSize=9, textColor=MUTED,
                 alignment=TA_CENTER, leading=12, spaceBefore=5))
-            
-            dummy_caption = Paragraph(html.escape(get_display(caption_text)), ParagraphStyle('Caption_Hidden', fontName=font_name, fontSize=0, leading=0, spaceBefore=0, spaceAfter=0, textColor=colors.white))
+
+            dummy_caption = Paragraph(rtl_markup(caption_text), ParagraphStyle('Caption_Hidden', fontName=font_name, fontSize=0, leading=0, spaceBefore=0, spaceAfter=0, textColor=colors.white))
             story.append(dummy_caption)
             
             inner_table = Table([[img_table], [caption_p]], colWidths=[img.drawWidth])
@@ -649,8 +696,7 @@ def generate_pdf(document_number, content_blocks, classification=None, unique_id
                 body_cell = ParagraphStyle(name='TCl', fontName=font_name, fontSize=10,
                                            textColor=INK, alignment=TA_RIGHT, leading=13)
                 display_data = [
-                    [Paragraph(html.escape(get_display(str(cell))),
-                               header_cell if r == 0 else body_cell)
+                    [Paragraph(rtl_markup(str(cell)), header_cell if r == 0 else body_cell)
                      for cell in reversed(row)]
                     for r, row in enumerate(table_data)
                 ]
@@ -686,7 +732,7 @@ def generate_pdf(document_number, content_blocks, classification=None, unique_id
                 HRFlowable(width=2.2 * inch, thickness=0.75, color=INK,
                            spaceAfter=4, hAlign='LEFT'),
                 Image(sig_src, width=2 * inch, height=1 * inch, hAlign='LEFT'),
-                Paragraph(html.escape(get_display("חתימה מאושרת")), ParagraphStyle(
+                Paragraph(rtl_markup("חתימה מאושרת"), ParagraphStyle(
                     name='Sig', fontName=font_bold, fontSize=10, textColor=MUTED,
                     alignment=TA_LEFT, spaceBefore=4)),
             ]

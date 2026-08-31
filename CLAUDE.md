@@ -80,9 +80,15 @@ There is no build step for the front-end (vanilla JS/CSS served from
   `afterFlowable` records `(key, y)` per page in `canv._deferred_bookmarks`, and
   `save()` calls `bookmarkPage()` one page at a time, just before emitting that
   page. Keep these in sync if you touch either method.
-- **RTL rendering.** ReportLab has no BiDi support, so **every** user string is
-  wrapped in `bidi.algorithm.get_display(...)` right before it goes into a
-  `Paragraph`/`drawString`, and also `html.escape`d. `RTLTableOfContents` /
+- **RTL rendering.** ReportLab has no BiDi support. Every user string for a
+  `Paragraph` goes through `pdf_service.rtl_markup()`: split on hard newlines →
+  greedy word-wrap each line to the available width (real font metrics) →
+  `get_display(line, base_dir='R')` per resulting line → `html.escape` → join
+  with `<br/>`. Do **not** call `get_display` on a whole multi-line/wrapping
+  string (it reverses line order and mangles mixed Hebrew/English) and do not
+  set `wordWrap='RTL'` on top of `rtl_markup` output (double reorder).
+  `drawString` calls still use `get_display` directly (single short strings).
+  `RTLTableOfContents` /
   `RTLTableOfFigures` re-implement row drawing (page number left, dot leaders,
   right-aligned title, full-width `linkRect`) because the stock TOC is LTR-only.
 - **Fonts.** `_resolve_font()` tries `HEBREW_FONT_PATH`, then common Windows /
