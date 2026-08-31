@@ -5,8 +5,9 @@
 # מחולל מסמכים · Document Generator
 
 **Author structured, right‑to‑left (Hebrew) documents in a drag‑and‑drop block editor —
-render them to polished, paginated PDFs with an automatic table of contents,
-figure list and revision tracking.**
+render them to polished, paginated PDFs with a linked table of contents and
+figure list, revision tracking, per‑document header logos, an optional contact
+block and watermark, templates you can share, and a one‑file Windows build.**
 
 [![Release](https://img.shields.io/github/v/release/AlexRudyak/Document-Generator?color=4F46E5&label=release)](https://github.com/AlexRudyak/Document-Generator/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -49,15 +50,17 @@ figure list and revision tracking.**
 |---|---|
 | **Block editor** | Headings (6 indent levels), paragraphs, ordered / unordered lists, JSON tables, and captioned images. Drag‑and‑drop reordering, keyboard‑free indent controls. |
 | **Automatic structure** | Hierarchical heading numbers (`1.` → `1.1` → `1.1.1`), a linked **Table of Contents** and **Table of Figures**, figure captions — all generated at render time. |
-| **RTL‑correct PDFs** | BiDi text reordering, a custom right‑to‑left TOC/TOF renderer with dot leaders and clickable internal links, and a bundled Hebrew‑capable font. |
-| **Modern layout** | Cover page, banded headings, zebra tables, and hairline figure frames. |
+| **RTL‑correct PDFs** | Text is word‑wrapped and BiDi‑reordered **per line**, so hard newlines and mixed Hebrew ↔ English come out in the right order. Custom right‑to‑left TOC/TOF renderer with dot leaders and working internal links; bundled Hebrew‑capable font. |
+| **Modern layout** | Cover page, banded headings, zebra tables, hairline figure frames, per‑page furniture (document number, revision, date, `page X of N`). |
 | **Revisions** | Regenerate from any previous version — changed blocks are highlighted, the revision counter bumps, and the document's stable identifier is preserved. |
-| **Templates & history** | Save any layout as a reusable template (export / import all templates as a JSON file); search every generated document by title, ID or content. |
+| **Templates** | Save any layout as a reusable template, and **export / import** all templates as a JSON file to move them between installs. |
 | **Custom logos** | Upload a left / right header logo per document (each optional, with a live placement preview); a blank side leaves that corner empty. |
-| **Contact block** | Optional user-defined `label: value` rows (phone, e-mail, address, …) rendered left-aligned in the **first-page** header, beneath the left logo. |
-| **Watermark** | Optional faint diagonal watermark on every page (defaults to `טיוטה`). |
+| **Contact block** | Optional user‑defined `label: value` rows (phone, e‑mail, address, …) rendered left‑aligned in the **first‑page** header, beneath the left logo. |
+| **Watermark** | Optional faint diagonal watermark on every page (defaults to `טיוטה`, editable). |
+| **Fast with photos** | Uploads are capped and each image is downsized to what the page needs, so an image‑heavy PDF renders in a fraction of a second and stays small. |
+| **History & search** | Every generated document is kept and searchable by title, ID or content. |
 
-<sub>Tech: **Flask 3** (app‑factory + blueprint) · **Flask‑SQLAlchemy** (SQLite by default) · **marshmallow** · **ReportLab** + **python‑bidi** · vanilla‑JS front end, no build step · **pytest**.</sub>
+<sub>Tech: **Flask 3** (app‑factory + blueprint) · **Flask‑SQLAlchemy** (SQLite by default) · **marshmallow** · **ReportLab** + **python‑bidi** · **Pillow** · vanilla‑JS front end, no build step · **pytest** · **PyInstaller** for the executable.</sub>
 
 ---
 
@@ -129,11 +132,11 @@ Override paths with `DOCGEN_DATA_DIR`, `DOCGEN_UPLOAD_DIR`, or `HEBREW_FONT_PATH
 
 1. Give the document a **title** and (optionally) a custom ID.
 2. Add blocks, drag the `☰` handle to reorder, indent with `<` / `>`.
-3. In **document settings**, optionally enable a classification, header logos, a
-   signature, and a first-page contact block (add as many `label: value` rows as
-   you need).
+3. In **document settings**, optionally enable header logos, a signature, a
+   watermark, and a first-page contact block (add as many `label: value` rows as
+   you need). Each is a toggle; turning it off clears it.
 4. **צור מסמך PDF** downloads the rendered PDF.
-5. **שמור כתבנית** saves the current layout as a template; **ייצא / ייבא תבניות** move templates between installs as a JSON file.
+5. **שמור כתבנית** saves the current layout as a template; **⬇ ייצא תבניות** / **⬆ ייבא תבניות** move templates between installs as a JSON file.
 6. **היסטוריית מסמכים** lists past documents — open one to start a new **revision**.
 
 ### API
@@ -164,8 +167,11 @@ curl -X POST http://127.0.0.1:5000/api/documents/generate \
 
 **Block shape:** `{"type": title|header|paragraph|table|image|list_ordered|list_unordered, "text": str, "level"?: int, "image_name"?: str}`.
 For `table`, `text` is a JSON string of rows (`[["a","b"],["c","d"]]`); for `image`
-it is the path returned by `/api/upload`. Pass `"parent_document_id"` to create a
-revision.
+it is the path returned by `/api/upload`.
+
+**Optional `generate` fields:** `parent_document_id` (create a revision),
+`watermark` (str), `contact_details` (`[{label, value}]`), `signature_path`,
+`logo_left_path`, `logo_right_path`.
 
 ---
 
@@ -174,18 +180,20 @@ revision.
 ```
 run.py               entry point (dev server, or frozen‑app launcher)
 config.py             env‑driven configuration
-paths.py              source‑vs‑frozen path resolution (resources, user data)
+paths.py              source‑vs‑frozen path resolution (resources, user data, version)
+VERSION               single‑line version string, bundled into the build
 DocGenerator.spec     PyInstaller build recipe
+requirements.txt      runtime deps  ·  requirements-dev.txt  build + test deps
 app/
 ├── __init__.py       app factory: config, db, blueprint, error handlers, migrations
-├── models.py         Template · Document (revision metadata) · DocCounter
-├── schemas.py        marshmallow BlockSchema / TemplateSchema / DocumentSchema
-├── api/routes.py     /api blueprint
+├── models.py         Template · Document (revision + settings metadata) · DocCounter
+├── schemas.py        marshmallow BlockSchema / ContactRowSchema / TemplateSchema / DocumentSchema
+├── api/routes.py     /api blueprint (templates, import/export, documents, upload)
 ├── services/
 │   ├── pdf_service.py   ⭐ the PDF engine — see the module docstring
 │   └── diff_service.py  positional block diff → _highlight flags
 ├── templates/        index.html (editor), history.html
-└── static/           app.js, style.css, assets/ (bundled Hebrew font)
+└── static/           app.js, style.css, assets/ (bundled DejaVu Sans + example logos)
 tests/                pytest suite
 ```
 
@@ -197,8 +205,10 @@ tests/                pytest suite
    the revision number increments; otherwise a new number is minted from `DocCounter`.
 4. The document is persisted as a JSON block array.
 5. `pdf_service.generate_pdf` builds the ReportLab story (cover → TOC → TOF → one
-   flowable per block) and runs a **two‑pass** `multiBuild` so TOC page references
-   resolve; `NumberedCanvas` stamps page furniture once the page count is known.
+   flowable per block), reordering every string for RTL **per line** and
+   downsizing images to the draw box first. A **two‑pass** `multiBuild` resolves
+   TOC page numbers; `NumberedCanvas` stamps page furniture, the watermark and
+   the bookmark destinations once the page count is known.
 6. The PDF is streamed back as a download.
 
 See [CLAUDE.md](CLAUDE.md) for architectural decisions and coding standards.
@@ -211,7 +221,9 @@ See [CLAUDE.md](CLAUDE.md) for architectural decisions and coding standards.
 python -m pytest
 ```
 
-In‑memory SQLite, no network or external services required.
+In‑memory SQLite, no network or external services required. A few tests that
+inspect the generated PDF's links need PyMuPDF (`pip install -r requirements-dev.txt`);
+they're skipped automatically if it isn't installed.
 
 ---
 

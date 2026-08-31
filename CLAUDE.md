@@ -12,12 +12,15 @@ A Flask app that turns a JSON array of "content blocks" into a right-to-left
 
 ```bash
 pip install -r requirements.txt
-python run.py                 # dev server on :5000
-python -m pytest              # full suite (in-memory SQLite, no external deps)
+python run.py                 # dev server, opens http://127.0.0.1:5000
+python -m pytest              # full suite (in-memory SQLite, no network)
 
-pip install -r requirements-dev.txt
-pyinstaller DocGenerator.spec  # -> dist/DocGenerator/
+pip install -r requirements-dev.txt   # adds pyinstaller, waitress, pymupdf
+pyinstaller DocGenerator.spec         # -> dist/DocGenerator/
 ```
+
+Reach the dev server on **`127.0.0.1`, never `localhost`** — see the
+Performance note below.
 
 There is no build step for the front-end (vanilla JS/CSS served from
 `app/static/`).
@@ -44,8 +47,9 @@ There is no build step for the front-end (vanilla JS/CSS served from
   `Document` row sharing the parent's `unique_identifier`, with
   `revision_number + 1`. `diff_service.calculate_diff` adds `_highlight: true` to
   changed blocks; `pdf_service` renders those with a yellow background. The diff
-  is deliberately positional/simple. A revision inherits the parent's
-  `signature_path` / `logo_left_path` / `logo_right_path` unless overridden.
+  is deliberately positional/simple. The backend inherits only the parent's
+  header logos (`logo_left_path` / `logo_right_path`) unless overridden; the
+  editor re-sends the other optional settings when loading a document.
 - **Header logos.** `logo_left_path` / `logo_right_path` are optional per-document
   `Document` columns (uploaded via `/api/upload` like the signature). When a side
   has no image, that header corner is left empty — no fallback. Right = the
@@ -96,9 +100,6 @@ There is no build step for the front-end (vanilla JS/CSS served from
   `RTLTableOfContents` /
   `RTLTableOfFigures` re-implement row drawing (page number left, dot leaders,
   right-aligned title, full-width `linkRect`) because the stock TOC is LTR-only.
-- **Fonts.** `_resolve_font()` tries `HEBREW_FONT_PATH`, then common Windows /
-  Linux / macOS paths, then falls back to `Helvetica` (which cannot render
-  Hebrew). Never hardcode a single OS path again.
 - **Config via env.** `config.py` reads `SECRET_KEY`, `DATABASE_URL`,
   `MAX_CONTENT_LENGTH`, `UPLOAD_FOLDER`. `run.py` loads `.env` if `python-dotenv`
   is present. Document every new env var in `.env.example`.
@@ -110,11 +111,13 @@ There is no build step for the front-end (vanilla JS/CSS served from
   hardcode `app/static/...` — go through `paths.py`; add new bundled data files
   to `DocGenerator.spec`'s `datas`. `run.py` detects `sys.frozen` and switches to
   a no-reloader server (`waitress` if importable) plus auto-opens the browser.
+  The version string lives in `VERSION` (read via `paths.version()`, bundled in
+  the spec); bump it in the `chore(release): vX.Y.Z` commit.
 - **Fonts.** `pdf_service._resolve_font()` registers a (regular, bold) TTF pair,
-  trying `HEBREW_FONT_PATH` → system fonts → the bundled
-  `app/static/assets/fonts/DejaVuSans*.ttf` (which ships so the .exe renders
-  Hebrew anywhere) → Helvetica (no Hebrew). Result is cached in module globals
-  `FONT_REGULAR` / `FONT_BOLD`.
+  trying `HEBREW_FONT_PATH` / `HEBREW_FONT_BOLD_PATH` → system fonts (Windows /
+  Linux / macOS) → the bundled `app/static/assets/fonts/DejaVuSans*.ttf` (ships
+  so the .exe renders Hebrew anywhere) → Helvetica (no Hebrew). Cached in module
+  globals `FONT_REGULAR` / `FONT_BOLD`. Never hardcode a single OS path.
 - **PDF theme.** `pdf_service` has a palette block near the top (INK, MUTED,
   ACCENT, …). Keep colours referenced by name, not inline hex, so the look stays
   consistent. Headings: level 0 = filled dark band, level 1 = filled indigo-50
@@ -125,15 +128,28 @@ There is no build step for the front-end (vanilla JS/CSS served from
 - Python: PEP 8, 4-space indent, module-level docstring on every file, docstrings
   on non-trivial functions/classes. Prefer explicit names; the one sanctioned
   abbreviation is `b_type` for a block's type inside tight loops.
-- Keep user input on the escape path: schema validation → `html.escape` →
-  `get_display`. Do not add a code path that renders user text without all three.
+- Keep user input on the escape path: schema validation (rejects `<` / `>`) →
+  `rtl_markup()` for `Paragraph` text (or `html.escape(get_display(...))` for a
+  bare `drawString`). Never render user text raw.
 - New API endpoints: validate the body with a marshmallow schema, return
   `(jsonify(...), status)` tuples, and rely on the app-level 400/404/500 error
   handlers for uncaught cases.
 - New block types: update `BlockSchema.type`'s `OneOf`, the render loop in
   `generate_pdf`, and the editor in `app.js` (`typeLabels` + `addBlock`).
+- New optional document setting: a nullable `Document` column +
+  `_apply_lightweight_migrations`, a `DocumentSchema` field, read it in
+  `generate_document`, thread it to `generate_pdf`, return it from
+  `GET /documents/<id>`, and register it in `app.js`'s `OPTIONAL_SETTINGS`.
 - Add a pytest test for every bug fix and new endpoint. Tests must not require
   network or a real database.
+
+## Releasing
+
+Conventional Commits throughout (`feat:`, `fix:`, `perf:`, `docs:`, `chore:`).
+To cut a release: bump `VERSION`, `chore(release): vX.Y.Z`, tag `vX.Y.Z`,
+`pyinstaller DocGenerator.spec`, zip `dist/DocGenerator` as
+`DocGenerator-vX.Y.Z-windows-x64.zip`, and attach it to a GitHub release marked
+`--latest`. The build is Windows-only (built on Windows).
 
 ## Security / data hygiene
 
