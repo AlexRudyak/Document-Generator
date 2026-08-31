@@ -52,7 +52,7 @@ figure list and revision tracking.**
 | **RTL‑correct PDFs** | BiDi text reordering, a custom right‑to‑left TOC/TOF renderer with dot leaders and clickable internal links, and a bundled Hebrew‑capable font. |
 | **Modern layout** | Cover page, banded headings, zebra tables, and hairline figure frames. |
 | **Revisions** | Regenerate from any previous version — changed blocks are highlighted, the revision counter bumps, and the document's stable identifier is preserved. |
-| **Templates & history** | Save any layout as a reusable template; search every generated document by title, ID or content. |
+| **Templates & history** | Save any layout as a reusable template (export / import all templates as a JSON file); search every generated document by title, ID or content. |
 | **Custom logos** | Upload a left / right header logo per document (each optional, with a live placement preview); a blank side leaves that corner empty. |
 | **Contact block** | Optional user-defined `label: value` rows (phone, e-mail, address, …) rendered left-aligned in the **first-page** header, beneath the left logo. |
 | **Watermark** | Optional faint diagonal watermark on every page (defaults to `טיוטה`). |
@@ -133,7 +133,7 @@ Override paths with `DOCGEN_DATA_DIR`, `DOCGEN_UPLOAD_DIR`, or `HEBREW_FONT_PATH
    signature, and a first-page contact block (add as many `label: value` rows as
    you need).
 4. **צור מסמך PDF** downloads the rendered PDF.
-5. **שמור כתבנית** saves the current layout as a template.
+5. **שמור כתבנית** saves the current layout as a template; **ייצא / ייבא תבניות** move templates between installs as a JSON file.
 6. **היסטוריית מסמכים** lists past documents — open one to start a new **revision**.
 
 ### API
@@ -155,6 +155,8 @@ curl -X POST http://127.0.0.1:5000/api/documents/generate \
 |---|---|
 | `GET  /api/templates` | List templates |
 | `POST /api/templates` | Create a template (`{name, content}`) |
+| `GET  /api/templates/export` | Download all templates as JSON (`?id=` for one) |
+| `POST /api/templates/import` | Create templates from an uploaded JSON file |
 | `GET  /api/documents?q=` | List / search documents |
 | `GET  /api/documents/<id>` | Fetch one document's blocks |
 | `POST /api/documents/generate` | Validate, persist, and render a PDF |

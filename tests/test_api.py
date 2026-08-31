@@ -32,6 +32,44 @@ def test_block_rejects_html_tags(client):
     assert res.status_code == 400
 
 
+def test_export_then_import_templates_round_trips(client):
+    client.post('/api/templates', json={"name": "A", "content": [{"type": "header", "text": "h"}]})
+    client.post('/api/templates', json={"name": "B", "content": [{"type": "paragraph", "text": "p"}]})
+
+    exported = client.get('/api/templates/export')
+    assert exported.status_code == 200
+    assert 'attachment' in exported.headers['Content-Disposition']
+    payload = json.loads(exported.data)
+    assert {t['name'] for t in payload['templates']} == {"A", "B"}
+
+    # Re-importing collides -> suffixed copies, nothing lost.
+    res = client.post('/api/templates/import',
+                      data={'file': (io.BytesIO(exported.data), 't.json')},
+                      content_type='multipart/form-data')
+    assert res.status_code == 201
+    assert sorted(res.get_json()['created']) == ["A (2)", "B (2)"]
+    assert len(client.get('/api/templates').get_json()) == 4
+
+
+def test_import_templates_bare_list_and_skips_invalid(client):
+    body = json.dumps([
+        {"name": "good", "content": [{"type": "paragraph", "text": "ok"}]},
+        {"name": "bad", "content": [{"type": "nope", "text": "x"}]},
+    ]).encode()
+    res = client.post('/api/templates/import',
+                      data={'file': (io.BytesIO(body), 't.json')},
+                      content_type='multipart/form-data')
+    assert res.status_code == 201
+    assert res.get_json() == {"created": ["good"], "skipped": ["bad"]}
+
+
+def test_import_templates_rejects_non_json(client):
+    res = client.post('/api/templates/import',
+                      data={'file': (io.BytesIO(b'not json'), 't.json')},
+                      content_type='multipart/form-data')
+    assert res.status_code == 400
+
+
 def test_generate_document_returns_pdf(client):
     res = client.post('/api/documents/generate', json={
         "content": [

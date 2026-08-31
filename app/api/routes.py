@@ -58,8 +58,67 @@ def create_template():
     template = Template(name=data['name'], content=json.dumps(data['content'], ensure_ascii=False))
     db.session.add(template)
     db.session.commit()
-    
+
     return jsonify({"message": "Template created", "id": template.id}), 201
+
+
+@api_bp.route('/templates/export', methods=['GET'])
+def export_templates():
+    """Download every template (or one, with ``?id=``) as a JSON file."""
+    query = Template.query.order_by(Template.name)
+    tid = request.args.get('id', type=int)
+    if tid:
+        query = query.filter_by(id=tid)
+    payload = {
+        "kind": "doc-generator/templates",
+        "version": 1,
+        "templates": [{"name": t.name, "content": json.loads(t.content)} for t in query.all()],
+    }
+    data = json.dumps(payload, ensure_ascii=False, indent=2).encode('utf-8')
+    return send_file(io.BytesIO(data), mimetype='application/json', as_attachment=True,
+                     download_name='doc-templates.json')
+
+
+@api_bp.route('/templates/import', methods=['POST'])
+def import_templates():
+    """Create templates from an uploaded JSON file. Accepts a file this app
+    exported, a bare ``[{name, content}, ...]`` list, or a single
+    ``{name, content}`` object. Name clashes get a numeric suffix; invalid
+    entries are skipped."""
+    raw = request.files['file'].read() if 'file' in request.files else request.get_data()
+    try:
+        data = json.loads(raw)
+    except Exception:
+        return jsonify({"error": "הקובץ אינו JSON תקין"}), 400
+
+    if isinstance(data, dict) and isinstance(data.get('templates'), list):
+        items = data['templates']
+    elif isinstance(data, dict) and 'name' in data and 'content' in data:
+        items = [data]
+    elif isinstance(data, list):
+        items = data
+    else:
+        return jsonify({"error": "מבנה קובץ התבניות לא מזוהה"}), 400
+
+    schema = TemplateSchema()
+    taken = {t.name for t in Template.query.all()}
+    created, skipped = [], []
+    for item in items:
+        try:
+            loaded = schema.load(item)
+        except (ValidationError, TypeError, AttributeError):
+            skipped.append(item.get('name') if isinstance(item, dict) else None)
+            continue
+        name, n = loaded['name'], 2
+        while name in taken:
+            name = f"{loaded['name'][:90]} ({n})"
+            n += 1
+        taken.add(name)
+        db.session.add(Template(name=name, content=json.dumps(loaded['content'], ensure_ascii=False)))
+        created.append(name)
+    db.session.commit()
+    return jsonify({"created": created, "skipped": [s for s in skipped if s]}), 201
+
 
 @api_bp.route('/documents', methods=['GET'])
 def get_documents():

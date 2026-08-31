@@ -44,7 +44,7 @@ button, .btn-primary, .btn-secondary, .btn-modern, .btn-primary-modern {
     flex-wrap: wrap;
 }
 
-.toolbar select, .toolbar button, .toolbar a {
+.toolbar select, .toolbar button, .toolbar a, .toolbar label {
     padding: 10px 16px;
     border: 1px solid #cbd5e1;
     border-radius: 8px;
@@ -61,7 +61,7 @@ button, .btn-primary, .btn-secondary, .btn-modern, .btn-primary-modern {
     outline: none;
 }
 
-.toolbar button:hover, .toolbar a:hover {
+.toolbar button:hover, .toolbar a:hover, .toolbar label:hover {
     background: #f8fafc;
     transform: translateY(-1px);
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);

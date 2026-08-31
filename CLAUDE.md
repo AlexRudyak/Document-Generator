@@ -28,6 +28,11 @@ There is no build step for the front-end (vanilla JS/CSS served from
   `app/__init__.py`; the `/api` blueprint is in `app/api/routes.py`; `/` and
   `/history` are plain routes on the app. Tests pass a `TestConfig` to the
   factory.
+- **Template import/export.** `GET /api/templates/export` streams a
+  `{kind, version, templates:[{name, content}]}` JSON file (all templates, or one
+  with `?id=`). `POST /api/templates/import` takes a file (or that shape / a bare
+  list / a single object), validates each via `TemplateSchema`, skips invalid
+  entries, and suffixes ` (2)`, ` (3)` … on name clashes — always additive.
 - **Content is schemaless JSON.** `Document.content` / `Template.content` store a
   JSON array of blocks. The DB does not model blocks; `schemas.BlockSchema` is
   the only contract. Keep the block `type` list in sync across `schemas.py`,

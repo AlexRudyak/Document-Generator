@@ -17,6 +17,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('save-template-btn').addEventListener('click', saveTemplate);
     document.getElementById('generate-btn').addEventListener('click', generateDocument);
     document.getElementById('template-select').addEventListener('change', (e) => loadTemplate(e.target.value));
+    document.getElementById('export-templates-btn').addEventListener('click', exportTemplates);
+    document.getElementById('import-templates-input').addEventListener('change', importTemplates);
 
     wireImageUpload('doc-signature', 'signature-path', 'signature-status');
     wireImageUpload('doc-logo-right', 'logo-right-path', 'logo-right-status', 'logo-right-thumb');
@@ -523,6 +525,31 @@ function saveTemplate() {
             loadTemplates();
         }
     });
+}
+
+function exportTemplates() {
+    if (templates.length === 0) { alert("אין תבניות לייצוא."); return; }
+    // A plain navigation triggers the download (Content-Disposition: attachment).
+    window.location.href = '/api/templates/export';
+}
+
+async function importTemplates(e) {
+    const file = e.target.files[0];
+    e.target.value = '';           // allow re-importing the same file
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+        const res = await fetch('/api/templates/import', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'ייבוא נכשל');
+        let msg = `יובאו ${data.created.length} תבניות`;
+        if (data.skipped.length) msg += `, ${data.skipped.length} דולגו (לא תקינות)`;
+        alert(msg);
+        loadTemplates();
+    } catch (err) {
+        alert('ייבוא נכשל: ' + err.message);
+    }
 }
 
 function generateDocument() {
