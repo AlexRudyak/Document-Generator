@@ -94,7 +94,10 @@ const WATERMARK_DEFAULT = 'טיוטה';
 const OPTIONAL_SETTINGS = [
     { key: 'classification', toggle: 'classify-toggle',   control: 'classify-control' },
     { key: 'watermark',      toggle: 'wm-toggle',         control: 'wm-control',         text: 'wm-text', default: WATERMARK_DEFAULT },
-    { key: 'signature',      toggle: 'sig-toggle',        control: 'sig-control',        hidden: 'signature-path',   status: 'signature-status', caption: 'signature-text' },
+    // persistOnOff: switching this off only hides/excludes it from the
+    // document — it doesn't discard the uploaded/drawn file. The dedicated
+    // "remove" button (or a full reset) is what actually clears it.
+    { key: 'signature',      toggle: 'sig-toggle',        control: 'sig-control',        hidden: 'signature-path',   status: 'signature-status', caption: 'signature-text', persistOnOff: true },
     { key: 'logo_right',     toggle: 'logo-right-toggle', control: 'logo-right-control', hidden: 'logo-right-path',  status: 'logo-right-status', thumb: 'logo-right-thumb' },
     { key: 'logo_left',      toggle: 'logo-left-toggle',  control: 'logo-left-control',  hidden: 'logo-left-path',   status: 'logo-left-status',  thumb: 'logo-left-thumb'  },
     { key: 'contact',        toggle: 'contact-toggle',    control: 'contact-control',    rows: 'contact-rows' },
@@ -108,15 +111,17 @@ function setThumb(thumbId, url) {
     el.classList.toggle('has-img', !!url);
 }
 
-// Show/hide a setting's control to match its toggle; clear its value when off.
-// The visual on/off state is driven by an `is-on` class (rather than a CSS
-// `:checked` sibling selector) so it updates reliably when set from script.
-function syncSetting(s) {
+// Show/hide a setting's control to match its toggle; clear its value when off
+// (unless the setting is marked persistOnOff — then only `hardReset`, used
+// for an actual full reset, clears it). The visual on/off state is driven by
+// an `is-on` class (rather than a CSS `:checked` sibling selector) so it
+// updates reliably when set from script.
+function syncSetting(s, hardReset = false) {
     const cb = document.getElementById(s.toggle);
     const on = cb.checked;
     cb.closest('.setting').classList.toggle('is-on', on);
     document.getElementById(s.control).hidden = !on;
-    if (!on && s.hidden) {
+    if (!on && s.hidden && (hardReset || !s.persistOnOff)) {
         document.getElementById(s.hidden).value = '';
         const st = document.getElementById(s.status);
         if (st) { st.textContent = ''; st.className = 'file-name'; }
@@ -159,7 +164,10 @@ function applySetting(key, value, previewUrl, caption) {
             if (s.caption) document.getElementById(s.caption).value = caption || '';
         }
     }
-    syncSetting(s);
+    // Explicit state for a specific document/template: always applies fully
+    // (clearing stale values from whatever was previously loaded), unlike a
+    // plain user toggle-flip, which respects persistOnOff.
+    syncSetting(s, /* hardReset */ true);
 }
 
 // --- Contact-detail rows -------------------------------------------------
@@ -197,7 +205,10 @@ function getContactDetails() {
 }
 
 function resetOptionalSettings() {
-    OPTIONAL_SETTINGS.forEach(s => applySetting(s.key, null));
+    OPTIONAL_SETTINGS.forEach(s => {
+        document.getElementById(s.toggle).checked = false;
+        syncSetting(s, /* hardReset */ true);
+    });
 }
 
 // Upload an image file to /api/upload, stash the returned server path in the
@@ -299,6 +310,15 @@ function initSignaturePad() {
             const ok = await uploadImageFile(file, 'signature-path', 'signature-status');
             if (ok) panel.hidden = true;
         }, 'image/png');
+    });
+    document.getElementById('sig-remove-btn').addEventListener('click', () => {
+        document.getElementById('signature-path').value = '';
+        document.getElementById('signature-text').value = '';
+        const st = document.getElementById('signature-status');
+        st.textContent = '';
+        st.className = 'file-name';
+        panel.hidden = true;
+        clearCanvas();
     });
 }
 
@@ -805,8 +825,10 @@ function generateDocument() {
         classification: classified ? document.getElementById('doc-classification').value : null,
         watermark: document.getElementById('wm-toggle').checked
             ? (document.getElementById('wm-text').value.trim() || WATERMARK_DEFAULT) : null,
-        signature_path: document.getElementById('signature-path').value || null,
-        signature_text: document.getElementById('signature-text').value.trim() || null,
+        signature_path: document.getElementById('sig-toggle').checked
+            ? (document.getElementById('signature-path').value || null) : null,
+        signature_text: document.getElementById('sig-toggle').checked
+            ? (document.getElementById('signature-text').value.trim() || null) : null,
         logo_right_path: document.getElementById('logo-right-path').value || null,
         logo_left_path: document.getElementById('logo-left-path').value || null,
         contact_details: document.getElementById('contact-toggle').checked ? getContactDetails() : null,

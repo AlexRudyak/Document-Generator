@@ -640,6 +640,16 @@ textarea.block-input {
     background: var(--success-strong);
 }
 
+.sig-remove-btn {
+    background: var(--danger-soft);
+    color: var(--danger);
+    border-color: transparent;
+}
+
+.sig-remove-btn:hover {
+    background: var(--danger-soft-hover);
+}
+
 /* Mini page preview showing which header corner the logo lands in.
    Always visible in the card, even before the toggle is switched on. */
 .logo-preview {
