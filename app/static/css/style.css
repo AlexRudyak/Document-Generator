@@ -326,6 +326,14 @@ textarea.block-input {
     resize: vertical;
 }
 
+/* A slight indent (matching the PDF's LIST_INDENT) sets list items off from
+   body text — on the input itself, not the block, so the outer box edges
+   (and any merged-group border) stay flush with the paragraph above it. */
+.block[data-type="list_unordered"] > .block-input,
+.block[data-type="list_ordered"] > .block-input {
+    margin-right: 18px;
+}
+
 /* Controls */
 .block-controls {
     display: flex;

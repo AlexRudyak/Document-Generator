@@ -70,6 +70,10 @@ BAND_BG      = colors.HexColor('#0F172A')   # classification band
 ZEBRA        = colors.HexColor('#F8FAFC')   # alternating table row
 HIGHLIGHT    = colors.HexColor('#FEF08A')   # revision-change highlight
 
+# Slight right-indent (the RTL leading edge) that sets bullet/numbered list
+# items off from body paragraphs, which sit flush at rightIndent=0.
+LIST_INDENT = 14
+
 
 # --- Right-to-left text -----------------------------------------------------
 # ReportLab has no BiDi support and applies no reordering of its own, so we must
@@ -746,17 +750,19 @@ def generate_pdf(document_number, content_blocks, classification=None, unique_id
                 rightIndent=0, backColor=bg_color,
                 borderPadding=(2, 3, 2, 3) if bg_color else 0)))
         elif b_type == "list_unordered":
-            story.append(Paragraph(rtl_markup(f"•  {text}", font_name, 11, 452), ParagraphStyle(
+            # A slight indent from the right (the RTL leading edge) sets list
+            # items off from body paragraphs, which sit flush at rightIndent=0.
+            story.append(Paragraph(rtl_markup(f"•  {text}", font_name, 11, 452 - LIST_INDENT), ParagraphStyle(
                 f'CustomList_{level}', fontName=font_name, fontSize=11, spaceAfter=5,
                 leading=16, alignment=TA_RIGHT, textColor=INK,
-                rightIndent=0, backColor=bg_color)))
+                rightIndent=LIST_INDENT, backColor=bg_color)))
         elif b_type == "list_ordered":
             if last_type != "list_ordered": ordered_list_count = 1
             else: ordered_list_count += 1
-            story.append(Paragraph(rtl_markup(f"{ordered_list_count}.  {text}", font_name, 11, 452), ParagraphStyle(
+            story.append(Paragraph(rtl_markup(f"{ordered_list_count}.  {text}", font_name, 11, 452 - LIST_INDENT), ParagraphStyle(
                 f'CustomListOrd_{level}', fontName=font_name, fontSize=11, spaceAfter=5,
                 leading=16, alignment=TA_RIGHT, textColor=INK,
-                rightIndent=0, backColor=bg_color)))
+                rightIndent=LIST_INDENT, backColor=bg_color)))
         elif b_type == "image" and os.path.exists(text):
             # NOTE: ``text`` holds the uploaded file's path for image blocks.
             image_count += 1
