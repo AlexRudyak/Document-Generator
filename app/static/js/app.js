@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     wireImageUpload('doc-signature', 'signature-path', 'signature-status');
     wireImageUpload('doc-logo-right', 'logo-right-path', 'logo-right-status', 'logo-right-thumb');
     wireImageUpload('doc-logo-left', 'logo-left-path', 'logo-left-status', 'logo-left-thumb');
+    initSignaturePad();
 
     // Each option's control (dropdown / file picker / rows) is revealed only
     // when its toggle is on; turning a toggle off clears whatever it held.
@@ -121,6 +122,10 @@ function syncSetting(s) {
         if (st) { st.textContent = ''; st.className = 'file-name'; }
         if (s.thumb) setThumb(s.thumb, null);
     }
+    if (!on && s.key === 'signature') {
+        const panel = document.getElementById('sig-draw-panel');
+        if (panel) panel.hidden = true;
+    }
     if (!on && s.rows) {
         document.getElementById(s.rows).innerHTML = '';
     }
@@ -193,31 +198,105 @@ function resetOptionalSettings() {
     OPTIONAL_SETTINGS.forEach(s => applySetting(s.key, null));
 }
 
-// Upload the chosen image to /api/upload, stash the returned server path in the
-// hidden input, show the file name, and (for logos) preview it in its corner.
+// Upload an image file to /api/upload, stash the returned server path in the
+// hidden input, show its name, and (for logos) preview it in its corner.
+async function uploadImageFile(file, hiddenId, statusId, thumbId) {
+    const status = statusId ? document.getElementById(statusId) : null;
+    if (status) { status.textContent = 'מעלה…'; status.className = 'file-name uploading'; }
+    if (thumbId) setThumb(thumbId, URL.createObjectURL(file));   // instant local preview
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (!data.filepath) throw new Error(data.error || 'upload failed');
+        document.getElementById(hiddenId).value = data.filepath;
+        if (status) { status.textContent = '✓ ' + file.name; status.className = 'file-name ok'; }
+        if (thumbId && data.url) setThumb(thumbId, data.url);
+        return true;
+    } catch (err) {
+        if (status) { status.textContent = ''; status.className = 'file-name'; }
+        if (thumbId) setThumb(thumbId, null);
+        alert('העלאה נכשלה: ' + err.message);
+        return false;
+    }
+}
+
 function wireImageUpload(inputId, hiddenId, statusId, thumbId) {
     const input = document.getElementById(inputId);
     if (!input) return;
-    input.addEventListener('change', async (e) => {
+    input.addEventListener('change', (e) => {
         if (e.target.files.length === 0) return;
-        const file = e.target.files[0];
-        const status = statusId ? document.getElementById(statusId) : null;
-        if (status) { status.textContent = 'מעלה…'; status.className = 'file-name uploading'; }
-        if (thumbId) setThumb(thumbId, URL.createObjectURL(file));   // instant local preview
-        const formData = new FormData();
-        formData.append('file', file);
-        try {
-            const res = await fetch('/api/upload', { method: 'POST', body: formData });
-            const data = await res.json();
-            if (!data.filepath) throw new Error(data.error || 'upload failed');
-            document.getElementById(hiddenId).value = data.filepath;
-            if (status) { status.textContent = '✓ ' + file.name; status.className = 'file-name ok'; }
-            if (thumbId && data.url) setThumb(thumbId, data.url);
-        } catch (err) {
-            if (status) { status.textContent = ''; status.className = 'file-name'; }
-            if (thumbId) setThumb(thumbId, null);
-            alert('העלאה נכשלה: ' + err.message);
-        }
+        uploadImageFile(e.target.files[0], hiddenId, statusId, thumbId);
+    });
+}
+
+// Lets the user draw a signature with the mouse (or touch/pen) instead of
+// uploading a file. Strokes are drawn in a fixed dark ink color regardless of
+// the app's theme, since the canvas always represents a white printed page.
+function initSignaturePad() {
+    const toggleBtn = document.getElementById('sig-draw-toggle-btn');
+    const panel = document.getElementById('sig-draw-panel');
+    const canvas = document.getElementById('sig-canvas');
+    if (!toggleBtn || !panel || !canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#1e293b';
+    let drawing = false;
+    let hasStrokes = false;
+
+    const posFromEvent = (e) => {
+        const rect = canvas.getBoundingClientRect();
+        return {
+            x: (e.clientX - rect.left) * (canvas.width / rect.width),
+            y: (e.clientY - rect.top) * (canvas.height / rect.height),
+        };
+    };
+
+    canvas.addEventListener('pointerdown', (e) => {
+        drawing = true;
+        hasStrokes = true;
+        const p = posFromEvent(e);
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        canvas.setPointerCapture(e.pointerId);
+    });
+    canvas.addEventListener('pointermove', (e) => {
+        if (!drawing) return;
+        const p = posFromEvent(e);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+    });
+    const stopDrawing = () => { drawing = false; };
+    canvas.addEventListener('pointerup', stopDrawing);
+    canvas.addEventListener('pointercancel', stopDrawing);
+    canvas.addEventListener('pointerleave', stopDrawing);
+
+    const clearCanvas = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        hasStrokes = false;
+    };
+
+    toggleBtn.addEventListener('click', () => {
+        panel.hidden = !panel.hidden;
+        if (!panel.hidden) clearCanvas();
+    });
+    document.getElementById('sig-clear-btn').addEventListener('click', clearCanvas);
+    document.getElementById('sig-cancel-btn').addEventListener('click', () => {
+        panel.hidden = true;
+        clearCanvas();
+    });
+    document.getElementById('sig-save-btn').addEventListener('click', () => {
+        if (!hasStrokes) { alert('צייר חתימה לפני השמירה.'); return; }
+        canvas.toBlob(async (blob) => {
+            if (!blob) return;
+            const file = new File([blob], 'signature.png', { type: 'image/png' });
+            const ok = await uploadImageFile(file, 'signature-path', 'signature-status');
+            if (ok) panel.hidden = true;
+        }, 'image/png');
     });
 }
 

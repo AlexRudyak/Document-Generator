@@ -104,7 +104,6 @@
                     </label>
                     <div class="logo-preview" title="החתימה מוצגת בתחתית המסמך, מיושרת לשמאל">
                         <div class="lp-page">
-                            <span class="lp-lines"></span>
                             <span class="lp-sig-line"></span>
                             <span class="lp-sig-box"></span>
                         </div>
@@ -113,8 +112,17 @@
                     <div class="setting-control" id="sig-control" hidden>
                         <input type="file" id="doc-signature" accept="image/*" class="file-input">
                         <label for="doc-signature" class="file-btn">בחר קובץ…</label>
+                        <button type="button" id="sig-draw-toggle-btn" class="file-btn sig-draw-btn">✍️ צייר חתימה</button>
                         <span class="file-name" id="signature-status"></span>
                         <input type="hidden" id="signature-path" value="">
+                    </div>
+                    <div class="sig-draw-panel" id="sig-draw-panel" hidden>
+                        <canvas id="sig-canvas" class="sig-canvas" width="300" height="130"></canvas>
+                        <div class="sig-draw-actions">
+                            <button type="button" id="sig-clear-btn" class="contact-add">נקה</button>
+                            <button type="button" id="sig-cancel-btn" class="contact-add">ביטול</button>
+                            <button type="button" id="sig-save-btn" class="sig-save-btn">✓ שמור חתימה</button>
+                        </div>
                     </div>
                 </div>
 

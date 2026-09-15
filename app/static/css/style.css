@@ -592,6 +592,54 @@ textarea.block-input {
 .file-name.ok { color: var(--success); }
 .file-name.uploading { color: var(--accent); }
 
+/* Draw-a-signature panel */
+.sig-draw-panel {
+    margin-top: 13px;
+    padding-top: 13px;
+    border-top: 1px dashed var(--border);
+    width: 100%;
+}
+
+.sig-draw-panel[hidden] {
+    display: none;
+}
+
+.sig-canvas {
+    display: block;
+    width: 100%;
+    max-width: 320px;
+    height: 130px;
+    background: #ffffff;
+    border: 2px dashed var(--border-strong);
+    border-radius: 8px;
+    cursor: crosshair;
+    touch-action: none;
+}
+
+.sig-draw-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+.sig-save-btn {
+    padding: 7px 16px;
+    border: none;
+    border-radius: 8px;
+    background: var(--success);
+    color: var(--on-accent);
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.sig-save-btn:hover {
+    background: var(--success-strong);
+}
+
 /* Mini page preview showing which header corner the logo lands in.
    Always visible in the card, even before the toggle is switched on. */
 .logo-preview {
