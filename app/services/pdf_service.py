@@ -484,9 +484,27 @@ class _SignatureFlowable(Flowable):
                            mask='auto', preserveAspectRatio=True, anchor='c')
         except Exception:
             pass
-        canv.setFont(self.font_name, 11)
+
+        # Word-wrap (shrinking the font if needed) so a longer caption fits
+        # the box instead of running off its edge. _wrap_line greedily wraps
+        # *logical*-order text; get_display() then BiDi-reorders each
+        # resulting line for display, same as rtl_markup().
+        pad = 4
+        max_w = self.width - 2 * pad
+        font_size = 11
+        lines = _wrap_line(self.text, self.font_name, font_size, max_w)
+        leading = font_size * 1.15
+        while len(lines) * leading > self.height - 2 * pad and font_size > 7:
+            font_size -= 1
+            lines = _wrap_line(self.text, self.font_name, font_size, max_w)
+            leading = font_size * 1.15
+
+        canv.setFont(self.font_name, font_size)
         canv.setFillColor(INK)
-        canv.drawCentredString(self.width / 2.0, self.height / 2.0 - 4, get_display(self.text))
+        y = self.height / 2.0 + (len(lines) - 1) * leading / 2.0 - font_size * 0.35
+        for line in lines:
+            canv.drawCentredString(self.width / 2.0, y, get_display(line))
+            y -= leading
         canv.restoreState()
 
 
