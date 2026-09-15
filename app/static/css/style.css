@@ -284,6 +284,11 @@ button, .btn-primary, .btn-secondary, .btn-modern, .btn-primary-modern {
 }
 
 .collapse-toggle[hidden] {
+    /* Override the browser's default [hidden]{display:none} — this needs to
+       stay in normal flex flow (just invisible) so it still reserves the
+       same width as an active toggle, keeping every block's input aligned
+       regardless of type. */
+    display: inline-block;
     visibility: hidden;
 }
 
