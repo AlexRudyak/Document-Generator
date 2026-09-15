@@ -226,6 +226,7 @@ button, .btn-primary, .btn-secondary, .btn-modern, .btn-primary-modern {
 .paragraph-quick-add {
     flex-basis: 100%;
     display: flex;
+    justify-content: center;
     gap: 8px;
     flex-wrap: wrap;
 }
