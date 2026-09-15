@@ -83,10 +83,10 @@
         .btn-danger-soft { background: var(--danger-soft); color: var(--danger); }
         .btn-danger-soft:hover { background: var(--danger-soft-hover); }
 
-        /* "Reprint without the yellow diff" per-row action */
-        .btn-clean-pdf {
-            align-self: flex-start;
-            margin-top: 2px;
+        /* Per-row actions: redownload the PDF, or (when relevant) a copy
+           with the yellow revision diff highlighting stripped. */
+        .row-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+        .btn-row-action {
             padding: 4px 10px;
             border: 1px solid var(--accent-soft-border);
             border-radius: 999px;
@@ -98,7 +98,7 @@
             cursor: pointer;
             transition: background 0.15s;
         }
-        .btn-clean-pdf:hover { background: var(--accent-soft-hover); }
+        .btn-row-action:hover { background: var(--accent-soft-hover); }
 
         /* Badges */
         .badge { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; }
@@ -216,9 +216,12 @@
                         <div class="flex-col">
                             <strong class="doc-title-strong">${docTitle}</strong>
                             <span class="text-sm">מספר סידורי: ${doc.document_number}</span>
-                            ${doc.has_highlights
-                                ? `<button type="button" class="btn-clean-pdf" data-id="${doc.id}">🧹 הורד PDF ללא סימון שינויים</button>`
-                                : ''}
+                            <div class="row-actions">
+                                <button type="button" class="btn-row-action" data-action="download">⬇ הורד PDF</button>
+                                ${doc.has_highlights
+                                    ? `<button type="button" class="btn-row-action" data-action="download-clean">🧹 ללא סימון שינויים</button>`
+                                    : ''}
+                            </div>
                         </div>
                     </td>
                     <td>
@@ -235,13 +238,13 @@
                     updateBulkBar();
                 });
 
-                const cleanBtn = tr.querySelector('.btn-clean-pdf');
-                if (cleanBtn) {
-                    cleanBtn.addEventListener('click', (e) => {
+                tr.querySelectorAll('.btn-row-action').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        window.location.href = `/api/documents/${doc.id}/pdf?highlight=0`;
+                        const query = btn.dataset.action === 'download-clean' ? '?highlight=0' : '';
+                        window.location.href = `/api/documents/${doc.id}/pdf${query}`;
                     });
-                }
+                });
 
                 tbody.appendChild(tr);
             });
