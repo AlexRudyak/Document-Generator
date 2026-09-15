@@ -52,3 +52,6 @@ class DocumentSchema(Schema):
     watermark = fields.String(required=False, allow_none=True, load_default=None,
                               validate=_reject_html)
     custom_doc_id = fields.String(required=False, allow_none=True)
+    # Whether a revision's changed blocks get a yellow diff highlight against
+    # the parent; irrelevant (ignored) when there's no parent_document_id.
+    highlight_changes = fields.Boolean(required=False, allow_none=True, load_default=True)

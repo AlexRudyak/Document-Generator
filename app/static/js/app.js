@@ -624,6 +624,7 @@ function loadTemplate(id) {
     if(t) {
         currentParentDocId = null;
         document.getElementById('revision-alert').style.display = 'none';
+        document.getElementById('highlight-changes-toggle').checked = true;
         document.getElementById('blocks-container').innerHTML = '';
         document.getElementById('doc-title').value = '';
         document.getElementById('custom-doc-id').value = '';
@@ -643,6 +644,7 @@ function loadDocument(id) {
     if(!id) {
         currentParentDocId = null;
         document.getElementById('revision-alert').style.display = 'none';
+        document.getElementById('highlight-changes-toggle').checked = true;
         document.getElementById('custom-doc-id').value = '';
         document.getElementById('custom-doc-id').disabled = false;
         resetOptionalSettings();
@@ -652,7 +654,8 @@ function loadDocument(id) {
         .then(r => r.json())
         .then(d => {
             currentParentDocId = d.id;
-            document.getElementById('revision-alert').style.display = 'block';
+            document.getElementById('revision-alert').style.display = 'flex';
+            document.getElementById('highlight-changes-toggle').checked = true;
             applySetting('classification', d.classification);
             applySetting('watermark', d.watermark);
             applySetting('signature', d.signature_path, null, d.signature_text);
@@ -836,6 +839,7 @@ function generateDocument() {
     };
     if (currentParentDocId) {
         payload.parent_document_id = currentParentDocId;
+        payload.highlight_changes = document.getElementById('highlight-changes-toggle').checked;
     }
     
     fetch('/api/documents/generate', {
@@ -871,7 +875,8 @@ function generateDocument() {
         
         currentParentDocId = null;
         document.getElementById('revision-alert').style.display = 'none';
-        
+        document.getElementById('highlight-changes-toggle').checked = true;
+
     })
     .catch(err => console.error(err));
 }

@@ -211,6 +211,39 @@ def test_generate_document_creates_revision(client):
     assert 'Rev2' in second.headers['Content-Disposition']
 
 
+def test_revision_highlight_changes_default_on(client):
+    first = client.post('/api/documents/generate', json={
+        "content": [{"type": "header", "text": "V1"}],
+    })
+    parent_id = client.get('/api/documents').get_json()[0]['id']
+
+    second = client.post('/api/documents/generate', json={
+        "content": [{"type": "header", "text": "V2 changed"}],
+        "parent_document_id": parent_id,
+    })
+    assert second.status_code == 200
+    new_id = client.get('/api/documents').get_json()[0]['id']
+    content = client.get(f'/api/documents/{new_id}').get_json()['content']
+    assert content[0].get('_highlight') is True
+
+
+def test_revision_highlight_changes_can_be_disabled(client):
+    first = client.post('/api/documents/generate', json={
+        "content": [{"type": "header", "text": "V1"}],
+    })
+    parent_id = client.get('/api/documents').get_json()[0]['id']
+
+    second = client.post('/api/documents/generate', json={
+        "content": [{"type": "header", "text": "V2 changed"}],
+        "parent_document_id": parent_id,
+        "highlight_changes": False,
+    })
+    assert second.status_code == 200
+    new_id = client.get('/api/documents').get_json()[0]['id']
+    content = client.get(f'/api/documents/{new_id}').get_json()['content']
+    assert '_highlight' not in content[0]
+
+
 def test_delete_documents_removes_selected_only(client):
     client.post('/api/documents/generate', json={"content": [{"type": "header", "text": "A"}]})
     client.post('/api/documents/generate', json={"content": [{"type": "header", "text": "B"}]})

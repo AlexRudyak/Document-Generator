@@ -879,10 +879,31 @@ textarea.block-input {
     display: none;
     background: var(--warning-soft-bg);
     color: var(--warning-soft-text);
-    padding: 10px;
+    padding: 10px 14px;
     border-radius: 5px;
     margin-bottom: 20px;
     font-weight: bold;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.revision-alert-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.revision-alert-toggle input {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--warning-soft-text);
 }
 
 /* Footer credit */

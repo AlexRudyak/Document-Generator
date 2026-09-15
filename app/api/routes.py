@@ -243,8 +243,9 @@ def generate_document():
             unique_identifier = parent_doc.unique_identifier
             revision_number = parent_doc.revision_number + 1
             doc_num = parent_doc.document_number
-            old_content = json.loads(parent_doc.content)
-            content_list = calculate_diff(old_content, content_list)
+            if data.get('highlight_changes', True):
+                old_content = json.loads(parent_doc.content)
+                content_list = calculate_diff(old_content, content_list)
             # Inherit header logos from the parent unless this revision overrides.
             logo_left_path = logo_left_path or parent_doc.logo_left_path
             logo_right_path = logo_right_path or parent_doc.logo_right_path

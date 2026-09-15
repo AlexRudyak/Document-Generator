@@ -53,9 +53,13 @@ There is no build step for the front-end (vanilla JS/CSS served from
   `Document` row sharing the parent's `unique_identifier`, with
   `revision_number + 1`. `diff_service.calculate_diff` adds `_highlight: true` to
   changed blocks; `pdf_service` renders those with a yellow background. The diff
-  is deliberately positional/simple. The backend inherits only the parent's
-  header logos (`logo_left_path` / `logo_right_path`) unless overridden; the
-  editor re-sends the other optional settings when loading a document.
+  is deliberately positional/simple. Highlighting is opt-out per generation: the
+  revision banner's "הדגש שינויים" checkbox (checked by default) sends
+  `highlight_changes`, and `generate_document` skips `calculate_diff` entirely
+  when it's false, so the revision renders with no diff markup at all. The
+  backend inherits only the parent's header logos (`logo_left_path` /
+  `logo_right_path`) unless overridden; the editor re-sends the other optional
+  settings when loading a document.
 - **Header logos.** `logo_left_path` / `logo_right_path` are optional per-document
   `Document` columns (uploaded via `/api/upload` like the signature). When a side
   has no image, that header corner is left empty — no fallback. Right = the
