@@ -94,6 +94,36 @@ def _wrap_line(line, font_name, font_size, max_width):
     return out
 
 
+def _wrap_hard(text, font_name, font_size, max_width):
+    """Like ``_wrap_line``, but also breaks a single token that alone exceeds
+    ``max_width`` (e.g. one long unbroken run with no spaces) into
+    character-level chunks, so it still stays within the width."""
+    out, cur = [], ''
+    for word in text.split(' '):
+        while pdfmetrics.stringWidth(word, font_name, font_size) > max_width:
+            lo, hi = 1, len(word)
+            while lo < hi:
+                mid = (lo + hi + 1) // 2
+                if pdfmetrics.stringWidth(word[:mid], font_name, font_size) <= max_width:
+                    lo = mid
+                else:
+                    hi = mid - 1
+            chunk, word = word[:lo] or word[:1], word[lo:] if lo else word[1:]
+            if cur:
+                out.append(cur)
+                cur = ''
+            out.append(chunk)
+        trial = f"{cur} {word}".strip()
+        if cur and pdfmetrics.stringWidth(trial, font_name, font_size) > max_width:
+            out.append(cur)
+            cur = word
+        else:
+            cur = trial
+    if cur:
+        out.append(cur)
+    return out or ['']
+
+
 def rtl_markup(text, font_name=None, font_size=None, max_width=None):
     """User text -> ReportLab paragraph markup, correct for RTL + mixed script.
 
@@ -486,17 +516,18 @@ class _SignatureFlowable(Flowable):
             pass
 
         # Word-wrap (shrinking the font if needed) so a longer caption fits
-        # the box instead of running off its edge. _wrap_line greedily wraps
-        # *logical*-order text; get_display() then BiDi-reorders each
-        # resulting line for display, same as rtl_markup().
+        # the box instead of running off its edge. _wrap_hard greedily wraps
+        # *logical*-order text, breaking any single overlong token (no
+        # spaces to wrap on) at the character level; get_display() then
+        # BiDi-reorders each resulting line for display, same as rtl_markup().
         pad = 4
         max_w = self.width - 2 * pad
         font_size = 11
-        lines = _wrap_line(self.text, self.font_name, font_size, max_w)
+        lines = _wrap_hard(self.text, self.font_name, font_size, max_w)
         leading = font_size * 1.15
         while len(lines) * leading > self.height - 2 * pad and font_size > 7:
             font_size -= 1
-            lines = _wrap_line(self.text, self.font_name, font_size, max_w)
+            lines = _wrap_hard(self.text, self.font_name, font_size, max_w)
             leading = font_size * 1.15
 
         canv.setFont(self.font_name, font_size)

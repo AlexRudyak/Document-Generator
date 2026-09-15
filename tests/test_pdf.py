@@ -47,6 +47,18 @@ def test_toc_links_point_to_their_headings_not_page_one():
     assert len(target_pages) == 4
 
 
+def test_wrap_hard_breaks_long_unbroken_token():
+    from app.services.pdf_service import _wrap_hard
+    from reportlab.pdfbase.pdfmetrics import stringWidth
+
+    text = "das" * 40  # a single 120-char "word" with no spaces to wrap on
+    lines = _wrap_hard(text, "Helvetica", 11, max_width=136)
+
+    assert "".join(lines) == text
+    assert all(stringWidth(line, "Helvetica", 11) <= 136 for line in lines)
+    assert len(lines) > 1
+
+
 def test_rtl_markup_keeps_line_order_and_bidi():
     from app.services.pdf_service import rtl_markup
 
