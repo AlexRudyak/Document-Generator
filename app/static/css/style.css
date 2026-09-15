@@ -631,6 +631,183 @@ textarea.block-input {
     color: #cbd5e1;
 }
 
+/* ============================================================
+   Templates side panel (export / import)
+   ============================================================ */
+.side-panel-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 100;
+}
+
+.side-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 380px;
+    max-width: 90vw;
+    background: #ffffff;
+    box-shadow: -8px 0 30px rgba(0,0,0,0.12);
+    z-index: 101;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 24px;
+    gap: 24px;
+}
+
+.side-panel[hidden], .side-panel-overlay[hidden] {
+    display: none;
+}
+
+.side-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.side-panel-header h2 {
+    margin: 0;
+    font-size: 18px;
+    color: #1e293b;
+}
+
+.side-panel-close {
+    border: none;
+    background: #f1f5f9;
+    color: #475569;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 700;
+    transition: background 0.15s;
+}
+
+.side-panel-close:hover {
+    background: #e2e8f0;
+}
+
+.side-panel-section {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px;
+    background: #f8fafc;
+}
+
+.side-panel-section h3 {
+    margin: 0 0 6px;
+    font-size: 15px;
+    color: #1e293b;
+}
+
+.panel-list-toolbar {
+    margin: 10px 0 4px;
+}
+
+.panel-select-all {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+}
+
+.panel-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 240px;
+    overflow-y: auto;
+    margin: 8px 0 14px;
+    padding: 4px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+}
+
+.panel-empty {
+    margin: 0;
+    padding: 10px;
+    font-size: 13px;
+    color: #94a3b8;
+    text-align: center;
+}
+
+.panel-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 13.5px;
+    color: #334155;
+}
+
+.panel-item:hover {
+    background: #f1f5f9;
+}
+
+.panel-item input {
+    flex: none;
+}
+
+.panel-item span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.panel-item .panel-item-note {
+    flex: none;
+    margin-right: auto;
+    font-size: 11px;
+    font-weight: 600;
+    color: #f59e0b;
+}
+
+.panel-action-btn {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.panel-action-btn.btn-secondary {
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #bfdbfe;
+}
+
+.panel-action-btn.btn-secondary:hover {
+    background: #dbeafe;
+}
+
+.panel-action-btn.btn-primary {
+    background: #3b82f6;
+    color: #ffffff;
+}
+
+.panel-action-btn.btn-primary:hover:not(:disabled) {
+    background: #2563eb;
+}
+
+.panel-action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 /* Indent Colors */
 .block[data-level="0"] { background-color: #ffffff; border-right: 5px solid #cbd5e1; }
 .block[data-level="1"] { background-color: #f0f8ff; border-right: 5px solid #60a5fa; }

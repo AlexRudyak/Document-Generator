@@ -51,6 +51,25 @@ def test_export_then_import_templates_round_trips(client):
     assert len(client.get('/api/templates').get_json()) == 4
 
 
+def test_export_with_multiple_ids_filters_to_selection(client):
+    ids = []
+    for name in ("A", "B", "C"):
+        res = client.post('/api/templates', json={"name": name, "content": [{"type": "header", "text": "h"}]})
+        ids.append(res.get_json()['id'])
+
+    exported = client.get(f'/api/templates/export?id={ids[0]}&id={ids[2]}')
+    assert exported.status_code == 200
+    payload = json.loads(exported.data)
+    assert {t['name'] for t in payload['templates']} == {"A", "C"}
+
+
+def test_import_templates_accepts_bare_json_body(client):
+    body = json.dumps([{"name": "FromBody", "content": [{"type": "paragraph", "text": "ok"}]}])
+    res = client.post('/api/templates/import', data=body, content_type='application/json')
+    assert res.status_code == 201
+    assert res.get_json()['created'] == ["FromBody"]
+
+
 def test_import_templates_bare_list_and_skips_invalid(client):
     body = json.dumps([
         {"name": "good", "content": [{"type": "paragraph", "text": "ok"}]},

@@ -158,7 +158,7 @@ curl -X POST http://127.0.0.1:5000/api/documents/generate \
 |---|---|
 | `GET  /api/templates` | List templates |
 | `POST /api/templates` | Create a template (`{name, content}`) |
-| `GET  /api/templates/export` | Download all templates as JSON (`?id=` for one) |
+| `GET  /api/templates/export` | Download templates as JSON (repeat `?id=` to select a subset, omit for all) |
 | `POST /api/templates/import` | Create templates from an uploaded JSON file |
 | `GET  /api/documents?q=` | List / search documents |
 | `GET  /api/documents/<id>` | Fetch one document's blocks |

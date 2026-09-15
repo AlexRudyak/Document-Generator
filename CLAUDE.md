@@ -32,10 +32,16 @@ There is no build step for the front-end (vanilla JS/CSS served from
   `/history` are plain routes on the app. Tests pass a `TestConfig` to the
   factory.
 - **Template import/export.** `GET /api/templates/export` streams a
-  `{kind, version, templates:[{name, content}]}` JSON file (all templates, or one
-  with `?id=`). `POST /api/templates/import` takes a file (or that shape / a bare
-  list / a single object), validates each via `TemplateSchema`, skips invalid
-  entries, and suffixes ` (2)`, ` (3)` … on name clashes — always additive.
+  `{kind, version, templates:[{name, content}]}` JSON file (all templates, or a
+  subset via repeated `?id=`). `POST /api/templates/import` takes a file, a raw
+  JSON body, or `fetch` JSON body (or that shape / a bare list / a single
+  object), validates each via `TemplateSchema`, skips invalid entries, and
+  suffixes ` (2)`, ` (3)` … on name clashes — always additive. The editor's
+  "ייצוא / ייבוא תבניות" toolbar button opens a side panel (`app.js`:
+  `openTemplatesPanel`/`renderExportList`/`handleImportFileSelect`) where the
+  user checks which existing templates to export and, after picking a file,
+  which of *its* templates to import — the file is parsed client-side and only
+  the checked entries are POSTed.
 - **Content is schemaless JSON.** `Document.content` / `Template.content` store a
   JSON array of blocks. The DB does not model blocks; `schemas.BlockSchema` is
   the only contract. Keep the block `type` list in sync across `schemas.py`,

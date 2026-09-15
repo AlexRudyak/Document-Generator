@@ -17,8 +17,15 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('save-template-btn').addEventListener('click', saveTemplate);
     document.getElementById('generate-btn').addEventListener('click', generateDocument);
     document.getElementById('template-select').addEventListener('change', (e) => loadTemplate(e.target.value));
-    document.getElementById('export-templates-btn').addEventListener('click', exportTemplates);
-    document.getElementById('import-templates-input').addEventListener('change', importTemplates);
+    document.getElementById('open-templates-panel-btn').addEventListener('click', openTemplatesPanel);
+    document.getElementById('close-templates-panel-btn').addEventListener('click', closeTemplatesPanel);
+    document.getElementById('templates-panel-overlay').addEventListener('click', closeTemplatesPanel);
+    document.getElementById('export-select-all').addEventListener('change', (e) => {
+        document.querySelectorAll('#export-templates-list input[type="checkbox"]').forEach(cb => cb.checked = e.target.checked);
+    });
+    document.getElementById('export-selected-btn').addEventListener('click', exportSelectedTemplates);
+    document.getElementById('import-templates-input').addEventListener('change', handleImportFileSelect);
+    document.getElementById('import-selected-btn').addEventListener('click', importSelectedTemplates);
 
     wireImageUpload('doc-signature', 'signature-path', 'signature-status');
     wireImageUpload('doc-logo-right', 'logo-right-path', 'logo-right-status', 'logo-right-thumb');
@@ -527,29 +534,117 @@ function saveTemplate() {
     });
 }
 
-function exportTemplates() {
-    if (templates.length === 0) { alert("אין תבניות לייצוא."); return; }
-    // A plain navigation triggers the download (Content-Disposition: attachment).
-    window.location.href = '/api/templates/export';
+let pendingImportItems = [];
+
+function openTemplatesPanel() {
+    renderExportList();
+    document.getElementById('templates-panel-overlay').hidden = false;
+    const panel = document.getElementById('templates-panel');
+    panel.hidden = false;
+    panel.setAttribute('aria-hidden', 'false');
 }
 
-async function importTemplates(e) {
+function closeTemplatesPanel() {
+    document.getElementById('templates-panel-overlay').hidden = true;
+    const panel = document.getElementById('templates-panel');
+    panel.hidden = true;
+    panel.setAttribute('aria-hidden', 'true');
+}
+
+function renderExportList() {
+    const list = document.getElementById('export-templates-list');
+    document.getElementById('export-select-all').checked = false;
+    if (templates.length === 0) {
+        list.innerHTML = '<p class="panel-empty">אין תבניות שמורות.</p>';
+        return;
+    }
+    list.innerHTML = '';
+    templates.forEach(t => {
+        const label = document.createElement('label');
+        label.className = 'panel-item';
+        label.innerHTML = `<input type="checkbox" value="${t.id}"><span>${escapeHtml(t.name)}</span>`;
+        list.append(label);
+    });
+}
+
+function exportSelectedTemplates() {
+    const ids = Array.from(document.querySelectorAll('#export-templates-list input[type="checkbox"]:checked'))
+        .map(cb => cb.value);
+    if (templates.length === 0) { alert("אין תבניות לייצוא."); return; }
+    if (ids.length === 0) { alert("בחר לפחות תבנית אחת לייצוא."); return; }
+    // A plain navigation triggers the download (Content-Disposition: attachment).
+    const params = ids.map(id => `id=${encodeURIComponent(id)}`).join('&');
+    window.location.href = `/api/templates/export?${params}`;
+}
+
+async function handleImportFileSelect(e) {
     const file = e.target.files[0];
-    e.target.value = '';           // allow re-importing the same file
+    e.target.value = '';           // allow re-selecting the same file
+    const list = document.getElementById('import-templates-list');
+    const importBtn = document.getElementById('import-selected-btn');
+    pendingImportItems = [];
+    importBtn.disabled = true;
     if (!file) return;
-    const formData = new FormData();
-    formData.append('file', file);
+
     try {
-        const res = await fetch('/api/templates/import', { method: 'POST', body: formData });
+        const text = await file.text();
+        const data = JSON.parse(text);
+        const items = (data && Array.isArray(data.templates)) ? data.templates
+            : Array.isArray(data) ? data
+            : (data && data.name && data.content) ? [data]
+            : null;
+        if (!items) throw new Error('מבנה קובץ התבניות לא מזוהה');
+        pendingImportItems = items;
+    } catch (err) {
+        list.innerHTML = `<p class="panel-empty">שגיאה בקריאת הקובץ: ${escapeHtml(err.message)}</p>`;
+        return;
+    }
+
+    if (pendingImportItems.length === 0) {
+        list.innerHTML = '<p class="panel-empty">הקובץ לא מכיל תבניות.</p>';
+        return;
+    }
+
+    const existingNames = new Set(templates.map(t => t.name));
+    list.innerHTML = '';
+    pendingImportItems.forEach((item, i) => {
+        const name = (item && item.name) ? item.name : '(ללא שם)';
+        const label = document.createElement('label');
+        label.className = 'panel-item';
+        const note = existingNames.has(name) ? '<span class="panel-item-note">שם קיים</span>' : '';
+        label.innerHTML = `<input type="checkbox" value="${i}" checked><span>${escapeHtml(name)}</span>${note}`;
+        list.append(label);
+    });
+    importBtn.disabled = false;
+}
+
+async function importSelectedTemplates() {
+    const indices = Array.from(document.querySelectorAll('#import-templates-list input[type="checkbox"]:checked'))
+        .map(cb => parseInt(cb.value, 10));
+    if (indices.length === 0) { alert("בחר לפחות תבנית אחת לייבוא."); return; }
+    const selected = indices.map(i => pendingImportItems[i]);
+    try {
+        const res = await fetch('/api/templates/import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(selected)
+        });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'ייבוא נכשל');
         let msg = `יובאו ${data.created.length} תבניות`;
         if (data.skipped.length) msg += `, ${data.skipped.length} דולגו (לא תקינות)`;
         alert(msg);
         loadTemplates();
+        closeTemplatesPanel();
     } catch (err) {
         alert('ייבוא נכשל: ' + err.message);
     }
+}
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str == null ? '' : String(str);
+    return div.innerHTML;
 }
 
 function generateDocument() {

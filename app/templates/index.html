@@ -18,9 +18,7 @@
             <select id="template-select">
                 <option value="">-- טען תבנית --</option>
             </select>
-            <button id="export-templates-btn" class="btn-secondary" title="הורדת כל התבניות כקובץ JSON">⬇ ייצא תבניות</button>
-            <label for="import-templates-input" class="btn-secondary" style="cursor: pointer;" title="ייבוא תבניות מקובץ JSON">⬆ ייבא תבניות</label>
-            <input type="file" id="import-templates-input" accept=".json,application/json" hidden>
+            <button id="open-templates-panel-btn" class="btn-secondary" title="ייצוא וייבוא תבניות">🗂 ייצוא / ייבוא תבניות</button>
             <a href="/history" class="btn-secondary" style="text-decoration: none;">📄 היסטוריית מסמכים</a>
         </div>
 
@@ -168,6 +166,37 @@
             </button>
         </div>
     </div>
+
+    <div id="templates-panel-overlay" class="side-panel-overlay" hidden></div>
+    <aside id="templates-panel" class="side-panel" hidden aria-hidden="true">
+        <div class="side-panel-header">
+            <h2>ייצוא / ייבוא תבניות</h2>
+            <button id="close-templates-panel-btn" class="side-panel-close" title="סגור" aria-label="סגור">✕</button>
+        </div>
+
+        <section class="side-panel-section">
+            <h3>ייצוא תבניות</h3>
+            <p class="setting-hint">בחר אילו תבניות לייצא כקובץ JSON.</p>
+            <div class="panel-list-toolbar">
+                <label class="panel-select-all"><input type="checkbox" id="export-select-all"> בחר הכל</label>
+            </div>
+            <div id="export-templates-list" class="panel-list">
+                <p class="panel-empty">אין תבניות שמורות.</p>
+            </div>
+            <button id="export-selected-btn" class="btn-secondary panel-action-btn">⬇ ייצא נבחרים</button>
+        </section>
+
+        <section class="side-panel-section">
+            <h3>ייבוא תבניות</h3>
+            <p class="setting-hint">בחר קובץ JSON, ואז סמן אילו תבניות מתוכו לייבא.</p>
+            <label for="import-templates-input" class="btn-secondary panel-action-btn" style="cursor: pointer; display: block; text-align: center;">📁 בחר קובץ...</label>
+            <input type="file" id="import-templates-input" accept=".json,application/json" hidden>
+            <div id="import-templates-list" class="panel-list">
+                <p class="panel-empty">לא נבחר קובץ.</p>
+            </div>
+            <button id="import-selected-btn" class="btn-primary panel-action-btn" disabled>⬆ ייבא נבחרים</button>
+        </section>
+    </aside>
 
     <footer class="app-credit">
         נוצר על ידי <strong>Alexander Rudyak</strong>

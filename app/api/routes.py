@@ -64,11 +64,12 @@ def create_template():
 
 @api_bp.route('/templates/export', methods=['GET'])
 def export_templates():
-    """Download every template (or one, with ``?id=``) as a JSON file."""
+    """Download templates as a JSON file. ``?id=`` may repeat to select a
+    subset (``?id=1&id=2``); with none given, every template is exported."""
     query = Template.query.order_by(Template.name)
-    tid = request.args.get('id', type=int)
-    if tid:
-        query = query.filter_by(id=tid)
+    ids = request.args.getlist('id', type=int)
+    if ids:
+        query = query.filter(Template.id.in_(ids))
     payload = {
         "kind": "doc-generator/templates",
         "version": 1,
