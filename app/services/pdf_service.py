@@ -351,7 +351,17 @@ class RTLTableOfContents(TableOfContents):
             fontSize = style.fontSize
             pagestrw = stringWidth(pagestr, style.fontName, fontSize)
             dotw = stringWidth(dot, style.fontName, fontSize)
-            textw = stringWidth(text, style.fontName, fontSize)
+            # A long title wraps onto more than one line; the dot leaders sit
+            # to the left of the *last* line, not the whole (unwrapped)
+            # title, so measure that line alone — otherwise the leftover
+            # width comes out too small (even negative) and the dots are
+            # skipped entirely. _wrap_line mirrors the word-wrap Paragraph
+            # itself uses, so this lines up with where that line actually
+            # ends even though it isn't reading Paragraph's own line breaks.
+            right_indent = getattr(style, 'rightIndent', 0) or 0
+            wrap_width = max(availWidth - right_indent, 1)
+            last_line = _wrap_line(text, style.fontName, fontSize, wrap_width)[-1]
+            textw = stringWidth(last_line, style.fontName, fontSize)
             x, y = canvas._curr_tx_info['cur_x'], canvas._curr_tx_info['cur_y']
             # Match the entry's font for the dot leaders and page number.
             canvas.setFont(style.fontName, fontSize)

@@ -56,6 +56,25 @@ def test_toc_links_point_to_their_headings_not_page_one():
     assert len(target_pages) == 4
 
 
+def test_toc_dot_leaders_survive_a_wrapped_title():
+    fitz = pytest.importorskip("fitz")  # pymupdf; skipped if not installed
+    import re
+
+    long_title = "מילה " * 40  # forces the TOC entry to wrap onto multiple lines
+    blocks = [
+        {"type": "title", "text": "T"},
+        {"type": "header", "text": "Short", "level": 0},
+        {"type": "header", "text": long_title, "level": 0},
+    ]
+    doc = fitz.open(stream=generate_pdf("IT-1", blocks), filetype="pdf")
+    toc_text = doc[1].get_text()
+    dot_runs = re.findall(r'(?:\.\s+){5,}', toc_text)
+    # One run of dot leaders per TOC entry — the wrapped one used to lose its
+    # dots because the leader math measured the whole unwrapped title instead
+    # of just its last rendered line.
+    assert len(dot_runs) == 2
+
+
 def test_wrap_hard_breaks_long_unbroken_token():
     from app.services.pdf_service import _wrap_hard
     from reportlab.pdfbase.pdfmetrics import stringWidth
