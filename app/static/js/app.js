@@ -564,26 +564,27 @@ function addBlock(type, text = '', level = -1, imageName = '') {
     controls.className = 'block-controls';
     controls.append(indentRightBtn, indentLeftBtn, deleteBtn);
 
-    // A paragraph gets its own "add a list right after this" shortcuts,
-    // attached under the block instead of living in the general toolbar.
+    // A paragraph gets shortcuts to turn itself into a list, attached under
+    // the same box instead of spawning a separate block or living in the
+    // general toolbar.
     let quickAdd = null;
     if (type === 'paragraph') {
-        const insertListAfter = (listType) => {
-            addBlock(listType, '', parseInt(block.dataset.level) || 0);
-            container.insertBefore(container.lastElementChild, block.nextSibling);
+        const convertTo = (listType) => {
+            block.dataset.type = listType;
+            quickAdd.remove();
             updateNumbering();
         };
         const addBulletBtn = document.createElement('button');
         addBulletBtn.type = 'button';
         addBulletBtn.className = 'quick-add-btn';
         addBulletBtn.innerText = '+ הוסף תבליטים';
-        addBulletBtn.onclick = () => insertListAfter('list_unordered');
+        addBulletBtn.onclick = () => convertTo('list_unordered');
 
         const addOrderedBtn = document.createElement('button');
         addOrderedBtn.type = 'button';
         addOrderedBtn.className = 'quick-add-btn';
         addOrderedBtn.innerText = '+ הוסף רשימה ממוספרת';
-        addOrderedBtn.onclick = () => insertListAfter('list_ordered');
+        addOrderedBtn.onclick = () => convertTo('list_ordered');
 
         quickAdd = document.createElement('div');
         quickAdd.className = 'paragraph-quick-add';
