@@ -229,28 +229,51 @@ function updateNumbering() {
     let orderedListCount = 0;
     let unorderedListCount = 0;
     let lastType = null;
-    
+    // Sections run from one top-level (level 0) header up to the next; a
+    // collapsed one hides everything in between except that anchor header.
+    let sectionCollapsed = false;
+
     blocks.forEach(block => {
         const type = block.dataset.type;
         const level = parseInt(block.dataset.level) || 0;
         const labelElement = block.querySelector('.block-type');
-        
+        const collapseBtn = block.querySelector('.collapse-toggle');
+
         if (type === 'header') {
             counters[level]++;
             for (let i = level + 1; i < 6; i++) counters[i] = 0;
             let numStr = counters.slice(0, level + 1).join('.');
             if (level === 0) numStr += '.';
             labelElement.innerText = numStr + ' כותרת';
-        } else if (type === 'list_ordered') {
-            if (lastType !== 'list_ordered') orderedListCount = 1;
-            else orderedListCount++;
-            labelElement.innerText = typeLabels[type] + ' ' + orderedListCount;
-        } else if (type === 'list_unordered') {
-            if (lastType !== 'list_unordered') unorderedListCount = 1;
-            else unorderedListCount++;
-            labelElement.innerText = typeLabels[type] + ' ' + unorderedListCount;
+
+            if (level === 0) {
+                // Anchor header: always visible, only place the toggle is active.
+                const collapsed = block.dataset.collapsed === 'true';
+                if (collapseBtn) {
+                    collapseBtn.hidden = false;
+                    collapseBtn.innerText = collapsed ? '▶' : '▼';
+                }
+                block.classList.toggle('section-collapsed', collapsed);
+                block.style.display = '';
+                sectionCollapsed = collapsed;
+            } else {
+                if (collapseBtn) collapseBtn.hidden = true;
+                block.classList.remove('section-collapsed');
+                block.style.display = sectionCollapsed ? 'none' : '';
+            }
         } else {
-            labelElement.innerText = typeLabels[type] || type.toUpperCase();
+            if (type === 'list_ordered') {
+                if (lastType !== 'list_ordered') orderedListCount = 1;
+                else orderedListCount++;
+                labelElement.innerText = typeLabels[type] + ' ' + orderedListCount;
+            } else if (type === 'list_unordered') {
+                if (lastType !== 'list_unordered') unorderedListCount = 1;
+                else unorderedListCount++;
+                labelElement.innerText = typeLabels[type] + ' ' + unorderedListCount;
+            } else {
+                labelElement.innerText = typeLabels[type] || type.toUpperCase();
+            }
+            block.style.display = sectionCollapsed ? 'none' : '';
         }
         lastType = type;
     });
@@ -303,10 +326,24 @@ function addBlock(type, text = '', level = -1, imageName = '') {
         updateNumbering();
     });
 
+    let collapseBtn = null;
+    if (type === 'header') {
+        collapseBtn = document.createElement('button');
+        collapseBtn.type = 'button';
+        collapseBtn.className = 'collapse-toggle';
+        collapseBtn.title = 'כווץ / הרחב סעיף';
+        collapseBtn.innerText = '▼';
+        collapseBtn.hidden = level !== 0;
+        collapseBtn.onclick = () => {
+            block.dataset.collapsed = block.dataset.collapsed === 'true' ? 'false' : 'true';
+            updateNumbering();
+        };
+    }
+
     const label = document.createElement('span');
     label.className = 'block-type';
     label.innerText = typeLabels[type] || type.toUpperCase();
-    
+
     let input;
     if (type === 'image') {
         input = document.createElement('div');
@@ -402,7 +439,7 @@ function addBlock(type, text = '', level = -1, imageName = '') {
     controls.className = 'block-controls';
     controls.append(indentRightBtn, indentLeftBtn, deleteBtn);
     
-    block.append(dragHandle, label, input, controls);
+    block.append(dragHandle, ...(collapseBtn ? [collapseBtn] : []), label, input, controls);
     container.append(block);
     updateNumbering();
 }

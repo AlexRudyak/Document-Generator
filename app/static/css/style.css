@@ -100,6 +100,32 @@ button, .btn-primary, .btn-secondary, .btn-modern, .btn-primary-modern {
     box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 
+.collapse-toggle {
+    flex: none;
+    width: 26px;
+    height: 26px;
+    margin-top: 8px;
+    border: none;
+    border-radius: 6px;
+    background: #eff6ff;
+    color: #3b82f6;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.collapse-toggle:hover {
+    background: #dbeafe;
+}
+
+.collapse-toggle[hidden] {
+    visibility: hidden;
+}
+
+.block.section-collapsed {
+    background: #f1f5f9;
+}
+
 .block-type {
     font-size: 13px;
     font-weight: 800;
