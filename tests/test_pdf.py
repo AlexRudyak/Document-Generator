@@ -75,6 +75,23 @@ def test_toc_dot_leaders_survive_a_wrapped_title():
     assert len(dot_runs) == 2
 
 
+def test_toc_safe_text_never_inserts_line_breaks():
+    from app.services.pdf_service import _toc_safe_text, rtl_markup
+
+    long_title = "מילה " * 40
+    # rtl_markup wraps + BiDi-reorders per visual line at a fixed width, so a
+    # long title comes out as several <br/>-joined, independently-reordered
+    # segments — correct for the heading's own page, but afterFlowable() used
+    # to read this back via getPlainText() for the TOC entry, which just
+    # concatenates those segments and scrambles the result (this was the bug:
+    # a wrapped heading's number/text order came out garbled in the TOC).
+    assert '<br/>' in rtl_markup(long_title, 'Helvetica', 12, 200)
+    # _toc_safe_text reorders the whole logical string as a single unit
+    # instead, so there's nothing to scramble — the TOC's own Paragraph wraps
+    # it at its own width as needed.
+    assert '<br/>' not in _toc_safe_text(long_title)
+
+
 def test_wrap_hard_breaks_long_unbroken_token():
     from app.services.pdf_service import _wrap_hard
     from reportlab.pdfbase.pdfmetrics import stringWidth

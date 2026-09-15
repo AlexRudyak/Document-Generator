@@ -145,6 +145,21 @@ def rtl_markup(text, font_name=None, font_size=None, max_width=None):
     return '<br/>'.join(pieces) or ' '
 
 
+def _toc_safe_text(text):
+    """A single-line BiDi-reordered, escaped version of ``text`` for TOC/TOF
+    entries.
+
+    Unlike ``rtl_markup``, this never pre-wraps: a heading long enough to
+    wrap on its own page gets reordered *per visual line* there (so each
+    line reads right at that fixed width), but ``NumberedCanvas.afterFlowable``
+    reads a heading's text back out via ``Paragraph.getPlainText()``, which
+    just concatenates those already-reordered lines — scrambling the result.
+    Reordering the whole logical string as one unit avoids that; the TOC's
+    own Paragraph re-wraps it at its own width as needed.
+    """
+    return html.escape(get_display(text, base_dir='R'))
+
+
 class NumberedCanvas(canvas.Canvas):
     def __init__(self, *args, **kwargs):
         self.doc_number = kwargs.pop('doc_number', 'IT-000-00000000')
@@ -294,7 +309,7 @@ class MyDocTemplate(SimpleDocTemplate):
                     level = int(parts[1])
                 if level < 3:
                     self.bookmark_counter += 1
-                    text = flowable.getPlainText()
+                    text = getattr(flowable, '_toc_text', None) or flowable.getPlainText()
                     key = f"BM_{self.bookmark_counter}"
                     self._record_bookmark(key, flowable)
                     self.notify('TOCEntry', (level, text, self.page, key))
@@ -710,6 +725,7 @@ def generate_pdf(document_number, content_blocks, classification=None, unique_id
                     style.backColor = HIGHLIGHT
                     style.borderPadding = (3, 6, 3, 6)
             head = Paragraph(rtl_markup(f"{numbering} {text}", font_bold, style.fontSize, 430), style)
+            head._toc_text = _toc_safe_text(f"{numbering} {text}")
             if level == 2:
                 # Small accent underline for level-2 headings.
                 story.append(KeepTogether([
