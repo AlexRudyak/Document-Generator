@@ -27,6 +27,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('import-templates-input').addEventListener('change', handleImportFileSelect);
     document.getElementById('import-selected-btn').addEventListener('click', importSelectedTemplates);
 
+    initThemeToggle();
+
     wireImageUpload('doc-signature', 'signature-path', 'signature-status');
     wireImageUpload('doc-logo-right', 'logo-right-path', 'logo-right-status', 'logo-right-thumb');
     wireImageUpload('doc-logo-left', 'logo-left-path', 'logo-left-status', 'logo-left-thumb');
@@ -60,6 +62,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+// Applies immediately on load (see the inline <script> in <head>); this just
+// wires the toggle button and keeps localStorage/icon in sync with it.
+function initThemeToggle() {
+    const btn = document.getElementById('theme-toggle-btn');
+    if (!btn) return;
+    const sync = () => {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        btn.innerText = isDark ? '☀️ מצב בהיר' : '🌙 מצב כהה';
+    };
+    sync();
+    btn.addEventListener('click', () => {
+        const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+        sync();
+    });
+}
 
 // The optional document settings. Each has a toggle checkbox, a revealed
 // control container, and (for file settings) the hidden input that carries the
@@ -308,7 +328,7 @@ function addBlock(type, text = '', level = -1, imageName = '') {
     dragHandle.className = 'drag-handle';
     dragHandle.style.cursor = 'grab';
     dragHandle.style.fontSize = '24px';
-    dragHandle.style.color = '#95a5a6';
+    dragHandle.style.color = 'var(--text-faint)';
     dragHandle.style.padding = '0 10px';
     dragHandle.style.userSelect = 'none';
     
@@ -362,9 +382,11 @@ function addBlock(type, text = '', level = -1, imageName = '') {
         nameIn.className = 'image-name-input';
         nameIn.style.marginRight = '15px';
         nameIn.style.padding = '8px';
-        nameIn.style.border = '2px solid #e2e8f0';
+        nameIn.style.border = '2px solid var(--border)';
         nameIn.style.borderRadius = '8px';
         nameIn.style.flexGrow = '1';
+        nameIn.style.background = 'var(--surface-alt)';
+        nameIn.style.color = 'var(--text-strong)';
         nameIn.value = block.dataset.imageName || '';
 
         const hiddenPath = document.createElement('input');
@@ -376,7 +398,7 @@ function addBlock(type, text = '', level = -1, imageName = '') {
         statusSpan.style.marginRight = '10px';
         statusSpan.style.fontSize = '13px';
         statusSpan.style.fontWeight = 'bold';
-        statusSpan.style.color = '#10b981';
+        statusSpan.style.color = 'var(--success)';
         if (text) {
             statusSpan.innerText = '✓ קובץ קיים';
         }
@@ -384,7 +406,7 @@ function addBlock(type, text = '', level = -1, imageName = '') {
         fileIn.onchange = async (e) => {
             if(e.target.files.length > 0) {
                 statusSpan.innerText = 'מעלה...';
-                statusSpan.style.color = '#3b82f6';
+                statusSpan.style.color = 'var(--accent)';
                 const formData = new FormData();
                 formData.append('file', e.target.files[0]);
                 const res = await fetch('/api/upload', { method: 'POST', body: formData });
@@ -392,7 +414,7 @@ function addBlock(type, text = '', level = -1, imageName = '') {
                 if(data.filepath) {
                     hiddenPath.value = data.filepath;
                     statusSpan.innerText = '✓ הועלה';
-                    statusSpan.style.color = '#10b981';
+                    statusSpan.style.color = 'var(--success)';
                 }
             }
         };

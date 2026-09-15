@@ -5,29 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>היסטוריית מסמכים</title>
     <script>if (location.hostname === 'localhost') location.replace(location.href.replace('//localhost', '//127.0.0.1'));</script>
+    <!-- Applied before the stylesheet renders so there's no flash of the wrong theme. -->
+    <script>(function(){var t=localStorage.getItem('theme');if(!t)t=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';document.documentElement.setAttribute('data-theme',t);})();</script>
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
     <style>
-        body { font-family: 'Heebo', sans-serif; background-color: #f8fafc; color: #334155; margin: 0; padding: 20px; }
-        .container { max-width: 1100px; margin: 20px auto; padding: 40px; background: #ffffff; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.03); }
-        .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 2px solid #f1f5f9; padding-bottom: 20px; }
-        .header-row h1 { margin: 0; font-size: 32px; color: #1e293b; }
-        
+        body { font-family: 'Heebo', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        .container { max-width: 1100px; margin: 20px auto; padding: 40px; background: var(--surface); border-radius: 16px; box-shadow: 0 10px 25px var(--shadow-sm); }
+        .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 2px solid var(--surface-muted); padding-bottom: 20px; gap: 12px; flex-wrap: wrap; }
+        .header-row h1 { margin: 0; font-size: 32px; color: var(--text-strong); }
+        .header-row-actions { display: flex; gap: 10px; }
+
         /* Modern Buttons */
-        .btn-modern { 
-            padding: 10px 20px; 
-            border-radius: 8px; 
-            font-weight: 600; 
-            cursor: pointer; 
-            text-decoration: none; 
-            transition: all 0.2s; 
-            background: #e2e8f0; 
-            color: #475569; 
+        .btn-modern {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+            background: var(--border);
+            color: var(--text-muted);
             border: none;
             display: inline-flex;
             align-items: center;
         }
-        .btn-modern:hover { background: #cbd5e1; }
+        .btn-modern:hover { background: var(--border-strong); }
 
         /* Modern Search Input */
         .search-container { position: relative; margin-bottom: 30px; }
@@ -36,45 +39,49 @@
             padding: 18px 24px;
             font-size: 18px;
             font-family: 'Heebo', sans-serif;
-            border: 2px solid #e2e8f0;
+            border: 2px solid var(--border);
             border-radius: 12px;
-            background: #f8fafc;
-            color: #1e293b;
+            background: var(--surface-alt);
+            color: var(--text-strong);
             box-sizing: border-box;
             transition: all 0.2s ease;
         }
         .search-container input:focus {
-            border-color: #3b82f6;
+            border-color: var(--accent);
             outline: none;
-            background: #ffffff;
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+            background: var(--surface);
+            box-shadow: 0 0 0 4px var(--accent-shadow);
         }
 
         /* Modern Table */
         .history-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        .history-table th { background-color: #f1f5f9; padding: 16px; text-align: right; color: #64748b; font-weight: 600; border-bottom: 2px solid #e2e8f0; }
-        .history-table td { padding: 16px; border-bottom: 1px solid #e2e8f0; font-size: 16px; }
+        .history-table th { background-color: var(--surface-muted); padding: 16px; text-align: right; color: var(--text-muted); font-weight: 600; border-bottom: 2px solid var(--border); }
+        .history-table td { padding: 16px; border-bottom: 1px solid var(--border); font-size: 16px; color: var(--text); }
         .history-table tr { transition: background-color 0.15s; }
-        .history-table tr:hover { background-color: #f8fafc; cursor: pointer; }
+        .history-table tr:hover { background-color: var(--surface-alt); cursor: pointer; }
 
         /* Badges */
         .badge { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; }
-        .badge-id { background: #e0f2fe; color: #0284c7; }
-        .badge-rev { background: #fef3c7; color: #d97706; }
-        .badge-date { background: #f1f5f9; color: #64748b; }
-        
-        .no-results { text-align: center; padding: 40px; color: #94a3b8; font-size: 18px; font-weight: 600; }
-        
+        .badge-id { background: var(--accent-soft); color: var(--accent-strong); }
+        .badge-rev { background: var(--warning-soft-bg); color: var(--warning-soft-text); }
+        .badge-date { background: var(--surface-muted); color: var(--text-muted); }
+
+        .no-results { text-align: center; padding: 40px; color: var(--text-faint); font-size: 18px; font-weight: 600; }
+
         /* Flex Alignment */
         .flex-col { display: flex; flex-direction: column; gap: 4px; }
-        .text-sm { font-size: 14px; color: #64748b; }
+        .text-sm { font-size: 14px; color: var(--text-muted); }
+        .doc-title-strong { color: var(--text-heading); }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header-row">
             <h1>היסטוריית מסמכים</h1>
-            <a href="/" class="btn-modern">&rarr; חזרה לעורך</a>
+            <div class="header-row-actions">
+                <button id="theme-toggle-btn" class="btn-modern" title="החלף מצב תצוגה"></button>
+                <a href="/" class="btn-modern">&rarr; חזרה לעורך</a>
+            </div>
         </div>
 
         <div class="search-container">
@@ -103,6 +110,21 @@
     </footer>
 
     <script>
+        (function initThemeToggle() {
+            const btn = document.getElementById('theme-toggle-btn');
+            const sync = () => {
+                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                btn.innerText = isDark ? '☀️ מצב בהיר' : '🌙 מצב כהה';
+            };
+            sync();
+            btn.addEventListener('click', () => {
+                const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', next);
+                localStorage.setItem('theme', next);
+                sync();
+            });
+        })();
+
         let searchTimeout = null;
 
         function renderDocuments(docs) {
@@ -129,7 +151,7 @@
                 tr.innerHTML = `
                     <td>
                         <div class="flex-col">
-                            <strong style="color: #0f172a;">${docTitle}</strong>
+                            <strong class="doc-title-strong">${docTitle}</strong>
                             <span class="text-sm">מספר סידורי: ${doc.document_number}</span>
                         </div>
                     </td>

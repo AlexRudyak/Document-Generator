@@ -7,6 +7,8 @@
     <!-- On some systems "localhost" resolves to IPv6 first and stalls ~2s per
          request; 127.0.0.1 is direct. Redirect once, then it's fast forever. -->
     <script>if (location.hostname === 'localhost') location.replace(location.href.replace('//localhost', '//127.0.0.1'));</script>
+    <!-- Applied before the stylesheet renders so there's no flash of the wrong theme. -->
+    <script>(function(){var t=localStorage.getItem('theme');if(!t)t=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';document.documentElement.setAttribute('data-theme',t);})();</script>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
@@ -20,6 +22,7 @@
             </select>
             <button id="open-templates-panel-btn" class="btn-secondary" title="ייצוא וייבוא תבניות">🗂 ייצוא / ייבוא תבניות</button>
             <a href="/history" class="btn-secondary" style="text-decoration: none;">📄 היסטוריית מסמכים</a>
+            <button id="theme-toggle-btn" class="btn-secondary theme-toggle" title="החלף מצב תצוגה"></button>
         </div>
 
         <div id="document-title-container" style="margin-bottom: 20px;">
@@ -30,7 +33,7 @@
             <input type="text" id="custom-doc-id" class="block-input" style="width: 100%; box-sizing: border-box;" placeholder="השאר ריק למזהה אוטומטי (IT-XXX-תאריך)...">
         </div>
 
-        <div id="revision-alert" style="display: none; background: #fff3cd; color: #856404; padding: 10px; border-radius: 5px; margin-bottom: 20px; font-weight: bold;">
+        <div id="revision-alert" class="revision-alert">
             שים לב: אתה עורך מסמך קיים. שמירה תיצור מהדורה חדשה (Revision).
         </div>
 
