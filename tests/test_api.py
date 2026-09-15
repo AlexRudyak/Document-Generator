@@ -32,6 +32,14 @@ def test_block_rejects_html_tags(client):
     assert res.status_code == 400
 
 
+def test_template_name_rejects_html(client):
+    res = client.post('/api/templates', json={
+        "name": "<script>alert(1)</script>",
+        "content": [{"type": "header", "text": "H"}]
+    })
+    assert res.status_code == 400
+
+
 def test_export_then_import_templates_round_trips(client):
     client.post('/api/templates', json={"name": "A", "content": [{"type": "header", "text": "h"}]})
     client.post('/api/templates', json={"name": "B", "content": [{"type": "paragraph", "text": "p"}]})
@@ -189,6 +197,14 @@ def test_signature_text_round_trip(client):
 def test_signature_text_rejects_html(client):
     res = client.post('/api/documents/generate', json={
         "content": [{"type": "header", "text": "H"}], "signature_text": "<b>x</b>",
+    })
+    assert res.status_code == 400
+
+
+def test_custom_doc_id_rejects_html(client):
+    res = client.post('/api/documents/generate', json={
+        "content": [{"type": "header", "text": "H"}],
+        "custom_doc_id": "<img src=x onerror=alert(1)>",
     })
     assert res.status_code == 400
 

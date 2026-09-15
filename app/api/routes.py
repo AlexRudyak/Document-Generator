@@ -144,7 +144,7 @@ def get_documents():
             content_list = json.loads(d.content)
             title = next((block['text'] for block in content_list if block.get('type') == 'title'), 'ללא כותרת')
             has_highlights = any(b.get('_highlight') for b in content_list)
-        except:
+        except Exception:
             title = 'ללא כותרת'
             has_highlights = False
 

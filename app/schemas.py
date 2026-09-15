@@ -5,7 +5,7 @@ template content and document content, and is what gets serialized into
 ``Template.content`` / ``Document.content``.
 """
 
-from marshmallow import Schema, fields, validate, validates, ValidationError
+from marshmallow import Schema, fields, validate, ValidationError
 
 
 def _reject_html(value):
@@ -22,19 +22,15 @@ class ContactRowSchema(Schema):
 
 class BlockSchema(Schema):
     type = fields.String(required=True, validate=validate.OneOf(["title", "header", "paragraph", "table", "image", "list_ordered", "list_unordered"]))
-    text = fields.String(required=True) # Text length validation removed for image b64 or empty tables
+    # First line of defence against injection: no angle brackets in any user
+    # text (see _reject_html). The PDF engine also html.escapes everything
+    # downstream. Length validation removed for image b64 or empty tables.
+    text = fields.String(required=True, validate=_reject_html)
     level = fields.Integer(required=False)
     image_name = fields.String(required=False, allow_none=True)
 
-    @validates("text")
-    def reject_html(self, value):
-        # First line of defence against injection: no angle brackets in any
-        # user text. The PDF engine also html.escapes everything downstream.
-        if "<" in value or ">" in value:
-            raise ValidationError("Invalid characters detected. HTML tags (<, >) are not allowed.")
-
 class TemplateSchema(Schema):
-    name = fields.String(required=True, validate=validate.Length(min=1, max=100))
+    name = fields.String(required=True, validate=[validate.Length(min=1, max=100), _reject_html])
     content = fields.List(fields.Nested(BlockSchema), required=True, validate=validate.Length(min=1))
 
 class DocumentSchema(Schema):
@@ -51,7 +47,10 @@ class DocumentSchema(Schema):
                                   allow_none=True, load_default=None)
     watermark = fields.String(required=False, allow_none=True, load_default=None,
                               validate=_reject_html)
-    custom_doc_id = fields.String(required=False, allow_none=True)
+    # Stored verbatim as Document.document_number and rendered client-side in
+    # the history table, so it needs the same HTML guard as every other
+    # user-text field, not just the block content.
+    custom_doc_id = fields.String(required=False, allow_none=True, validate=_reject_html)
     # Whether a revision's changed blocks get a yellow diff highlight against
     # the parent; irrelevant (ignored) when there's no parent_document_id.
     highlight_changes = fields.Boolean(required=False, allow_none=True, load_default=True)

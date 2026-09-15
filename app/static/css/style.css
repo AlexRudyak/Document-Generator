@@ -334,6 +334,26 @@ textarea.block-input {
     margin-right: 18px;
 }
 
+/* Image block: file picker + optional caption name, side by side */
+.image-input-wrapper {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px 0;
+}
+
+.image-name-input {
+    flex-grow: 1;
+    padding: 8px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    font-family: inherit;
+    background: var(--surface-alt);
+    color: var(--text-strong);
+}
+
 /* Controls */
 .block-controls {
     display: flex;
@@ -440,12 +460,15 @@ textarea.block-input {
 }
 
 .drag-handle {
+    cursor: grab;
+    font-size: 24px;
     color: var(--text-faint);
-    padding-top: 10px !important;
+    padding: 10px 10px 0;
+    user-select: none;
 }
 
 .drag-handle:hover {
-    color: var(--text-muted) !important;
+    color: var(--text-muted);
 }
 
 /* ============================================================

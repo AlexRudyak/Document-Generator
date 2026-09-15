@@ -175,6 +175,16 @@
         let searchTimeout = null;
         const selectedIds = new Set();
 
+        // Defense in depth: schema validation already rejects "<"/">" in the
+        // fields interpolated below (title comes from block text, document
+        // number from custom_doc_id), but a raw template literal into
+        // innerHTML would still be one bug away from stored XSS otherwise.
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str == null ? '' : String(str);
+            return div.innerHTML;
+        }
+
         function updateBulkBar() {
             const bar = document.getElementById('bulk-bar');
             const rowBoxes = document.querySelectorAll('.row-checkbox');
@@ -205,7 +215,9 @@
                 };
 
                 // The list API already extracts the title from the content JSON.
-                const docTitle = doc.title || doc.document_number;
+                const docTitle = escapeHtml(doc.title || doc.document_number);
+                const docNumber = escapeHtml(doc.document_number);
+                const uniqueId = escapeHtml(doc.unique_identifier);
                 const dateStr = doc.created_date
                     ? new Date(doc.created_date).toLocaleString('he-IL')
                     : '---';
@@ -215,7 +227,7 @@
                     <td>
                         <div class="flex-col">
                             <strong class="doc-title-strong">${docTitle}</strong>
-                            <span class="text-sm">מספר סידורי: ${doc.document_number}</span>
+                            <span class="text-sm">מספר סידורי: ${docNumber}</span>
                             <div class="row-actions">
                                 <button type="button" class="btn-row-action" data-action="download">⬇ הורד PDF</button>
                                 ${doc.has_highlights
@@ -225,7 +237,7 @@
                         </div>
                     </td>
                     <td>
-                        ${doc.unique_identifier ? `<span class="badge badge-id">${doc.unique_identifier}</span>` : '<span class="text-sm">---</span>'}
+                        ${doc.unique_identifier ? `<span class="badge badge-id">${uniqueId}</span>` : '<span class="text-sm">---</span>'}
                     </td>
                     <td><span class="badge badge-rev">Rev ${doc.revision_number}</span></td>
                     <td><span class="badge badge-date">${dateStr}</span></td>

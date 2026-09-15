@@ -336,6 +336,7 @@ function getDragAfterElement(container, y) {
 
 let templates = [];
 let currentParentDocId = null;
+let blockIdSeq = 0;   // unique per-block DOM-id suffix (see addBlock's image branch)
 
 const typeLabels = {
     'header': 'כותרת',
@@ -428,7 +429,8 @@ function updateNumbering() {
 
 function addBlock(type, text = '', level = -1, imageName = '') {
     const container = document.getElementById('blocks-container');
-    
+    const blockUid = `block-${++blockIdSeq}`;
+
     if (level === -1) {
         if (type.startsWith('list')) {
             const blocks = container.querySelectorAll('.block');
@@ -453,12 +455,7 @@ function addBlock(type, text = '', level = -1, imageName = '') {
     const dragHandle = document.createElement('div');
     dragHandle.innerText = '☰';
     dragHandle.className = 'drag-handle';
-    dragHandle.style.cursor = 'grab';
-    dragHandle.style.fontSize = '24px';
-    dragHandle.style.color = 'var(--text-faint)';
-    dragHandle.style.padding = '0 10px';
-    dragHandle.style.userSelect = 'none';
-    
+
     dragHandle.onmousedown = () => block.draggable = true;
     dragHandle.onmouseup = () => block.draggable = false;
     dragHandle.onmouseleave = () => block.draggable = false;
@@ -499,55 +496,39 @@ function addBlock(type, text = '', level = -1, imageName = '') {
     let input;
     if (type === 'image') {
         input = document.createElement('div');
-        input.style.flexGrow = '1';
-        input.style.display = 'flex';
-        input.style.alignItems = 'center';
-        input.style.padding = '10px 0';
-        
+        input.className = 'image-input-wrapper';
+
         const fileIn = document.createElement('input');
         fileIn.type = 'file';
         fileIn.accept = 'image/*';
-        
+
         const nameIn = document.createElement('input');
         nameIn.type = 'text';
         nameIn.placeholder = 'שם תמונה (אופציונלי)';
         nameIn.className = 'image-name-input';
-        nameIn.style.marginRight = '15px';
-        nameIn.style.padding = '8px';
-        nameIn.style.border = '2px solid var(--border)';
-        nameIn.style.borderRadius = '8px';
-        nameIn.style.flexGrow = '1';
-        nameIn.style.background = 'var(--surface-alt)';
-        nameIn.style.color = 'var(--text-strong)';
         nameIn.value = block.dataset.imageName || '';
 
         const hiddenPath = document.createElement('input');
         hiddenPath.type = 'hidden';
         hiddenPath.className = 'block-input image-path-input';
+        hiddenPath.id = `${blockUid}-path`;
         hiddenPath.value = text;
-        
+
         const statusSpan = document.createElement('span');
-        statusSpan.style.marginRight = '10px';
-        statusSpan.style.fontSize = '13px';
-        statusSpan.style.fontWeight = 'bold';
-        statusSpan.style.color = 'var(--success)';
+        statusSpan.id = `${blockUid}-status`;
         if (text) {
-            statusSpan.innerText = '✓ קובץ קיים';
+            statusSpan.textContent = '✓ קובץ קיים';
+            statusSpan.className = 'file-name ok';
+        } else {
+            statusSpan.className = 'file-name';
         }
 
-        fileIn.onchange = async (e) => {
-            if(e.target.files.length > 0) {
-                statusSpan.innerText = 'מעלה...';
-                statusSpan.style.color = 'var(--accent)';
-                const formData = new FormData();
-                formData.append('file', e.target.files[0]);
-                const res = await fetch('/api/upload', { method: 'POST', body: formData });
-                const data = await res.json();
-                if(data.filepath) {
-                    hiddenPath.value = data.filepath;
-                    statusSpan.innerText = '✓ הועלה';
-                    statusSpan.style.color = 'var(--success)';
-                }
+        // Same upload flow as the logo/signature pickers (status text,
+        // error handling) instead of a separate copy of the fetch/response
+        // handling here.
+        fileIn.onchange = (e) => {
+            if (e.target.files.length > 0) {
+                uploadImageFile(e.target.files[0], hiddenPath.id, statusSpan.id);
             }
         };
         input.append(fileIn, statusSpan, nameIn, hiddenPath);
@@ -713,18 +694,37 @@ function loadTemplates() {
         });
 }
 
+// The revision banner and its "highlight changes" toggle always change
+// together; hiding it also resets the toggle back to its checked default so
+// it doesn't leak a previous document's choice into the next one.
+function hideRevisionAlert() {
+    document.getElementById('revision-alert').style.display = 'none';
+    document.getElementById('highlight-changes-toggle').checked = true;
+}
+
+function showRevisionAlert() {
+    document.getElementById('revision-alert').style.display = 'flex';
+    document.getElementById('highlight-changes-toggle').checked = true;
+}
+
+// Common state to clear when leaving "editing a specific document's
+// revision" context: used both to start fresh (no template/document
+// selected) and as the first step before loading a different template.
+function resetRevisionState() {
+    currentParentDocId = null;
+    hideRevisionAlert();
+    document.getElementById('custom-doc-id').value = '';
+    document.getElementById('custom-doc-id').disabled = false;
+    resetOptionalSettings();
+}
+
 function loadTemplate(id) {
     if(!id) return;
     const t = templates.find(x => x.id == id);
     if(t) {
-        currentParentDocId = null;
-        document.getElementById('revision-alert').style.display = 'none';
-        document.getElementById('highlight-changes-toggle').checked = true;
+        resetRevisionState();
         document.getElementById('blocks-container').innerHTML = '';
         document.getElementById('doc-title').value = '';
-        document.getElementById('custom-doc-id').value = '';
-        document.getElementById('custom-doc-id').disabled = false;
-        resetOptionalSettings();
         t.content.forEach(b => {
             if (b.type === 'title') {
                 document.getElementById('doc-title').value = b.text;
@@ -737,20 +737,14 @@ function loadTemplate(id) {
 
 function loadDocument(id) {
     if(!id) {
-        currentParentDocId = null;
-        document.getElementById('revision-alert').style.display = 'none';
-        document.getElementById('highlight-changes-toggle').checked = true;
-        document.getElementById('custom-doc-id').value = '';
-        document.getElementById('custom-doc-id').disabled = false;
-        resetOptionalSettings();
+        resetRevisionState();
         return;
     }
     fetch(`/api/documents/${id}`)
         .then(r => r.json())
         .then(d => {
             currentParentDocId = d.id;
-            document.getElementById('revision-alert').style.display = 'flex';
-            document.getElementById('highlight-changes-toggle').checked = true;
+            showRevisionAlert();
             applySetting('classification', d.classification);
             applySetting('watermark', d.watermark);
             applySetting('signature', d.signature_path, null, d.signature_text);
@@ -969,9 +963,7 @@ function generateDocument() {
         a.remove();
         
         currentParentDocId = null;
-        document.getElementById('revision-alert').style.display = 'none';
-        document.getElementById('highlight-changes-toggle').checked = true;
-
+        hideRevisionAlert();
     })
     .catch(err => console.error(err));
 }

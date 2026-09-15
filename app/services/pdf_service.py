@@ -324,10 +324,6 @@ class MyDocTemplate(SimpleDocTemplate):
                 self._record_bookmark(key, flowable)
                 self.notify('TOFEntry', (0, text, self.page, key))
 
-from reportlab.pdfbase.pdfmetrics import stringWidth
-
-
-
 
 class RTLTableOfContents(TableOfContents):
     """Right-to-left table of contents.
@@ -368,8 +364,8 @@ class RTLTableOfContents(TableOfContents):
             dot = ' . '
             pagestr = str(page)
             fontSize = style.fontSize
-            pagestrw = stringWidth(pagestr, style.fontName, fontSize)
-            dotw = stringWidth(dot, style.fontName, fontSize)
+            pagestrw = pdfmetrics.stringWidth(pagestr, style.fontName, fontSize)
+            dotw = pdfmetrics.stringWidth(dot, style.fontName, fontSize)
             # A long title wraps onto more than one line; the dot leaders sit
             # to the left of the *last* line, not the whole (unwrapped)
             # title, so measure that line alone — otherwise the leftover
@@ -380,7 +376,7 @@ class RTLTableOfContents(TableOfContents):
             right_indent = getattr(style, 'rightIndent', 0) or 0
             wrap_width = max(availWidth - right_indent, 1)
             last_line = _wrap_line(text, style.fontName, fontSize, wrap_width)[-1]
-            textw = stringWidth(last_line, style.fontName, fontSize)
+            textw = pdfmetrics.stringWidth(last_line, style.fontName, fontSize)
             x, y = canvas._curr_tx_info['cur_x'], canvas._curr_tx_info['cur_y']
             # Match the entry's font for the dot leaders and page number.
             canvas.setFont(style.fontName, fontSize)
