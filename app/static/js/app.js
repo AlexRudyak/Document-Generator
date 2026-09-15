@@ -605,7 +605,7 @@ function addBlock(type, text = '', level = -1, imageName = '') {
     controls.className = 'block-controls';
     controls.append(indentRightBtn, indentLeftBtn, deleteBtn);
 
-    // A paragraph gets its own "add a list right after this" shortcuts,
+    // A paragraph gets its own "add more content right after this" shortcuts,
     // attached under the block instead of living in the general toolbar.
     // Each addition lands at the end of the paragraph's existing group (not
     // always right after the paragraph itself), so repeated clicks stack in
@@ -613,32 +613,46 @@ function addBlock(type, text = '', level = -1, imageName = '') {
     // merged into the paragraph's box (see updateNumbering).
     let quickAdd = null;
     if (type === 'paragraph') {
-        const insertListAfter = (listType) => {
+        const insertBlockAfter = (newType) => {
             let anchor = block;
             while (anchor.nextElementSibling && anchor.nextElementSibling.dataset.groupWithPrev === 'true') {
                 anchor = anchor.nextElementSibling;
             }
-            addBlock(listType, '', parseInt(block.dataset.level) || 0);
+            addBlock(newType, '', parseInt(block.dataset.level) || 0);
             const newBlock = container.lastElementChild;
             newBlock.dataset.groupWithPrev = 'true';
             container.insertBefore(newBlock, anchor.nextSibling);
+            if (newType === 'paragraph') {
+                // The new paragraph creates its own quick-add row and
+                // becomes the group's sole owner going forward — drop this
+                // one entirely (not just untrack it) or it's left orphaned
+                // in the DOM, no longer repositioned by updateNumbering().
+                if (block.quickAddEl) block.quickAddEl.remove();
+                delete block.quickAddEl;
+            }
             updateNumbering();
         };
+        const addTextBtn = document.createElement('button');
+        addTextBtn.type = 'button';
+        addTextBtn.className = 'quick-add-btn';
+        addTextBtn.innerText = '+ הוסף טקסט';
+        addTextBtn.onclick = () => insertBlockAfter('paragraph');
+
         const addBulletBtn = document.createElement('button');
         addBulletBtn.type = 'button';
         addBulletBtn.className = 'quick-add-btn';
         addBulletBtn.innerText = '+ הוסף תבליטים';
-        addBulletBtn.onclick = () => insertListAfter('list_unordered');
+        addBulletBtn.onclick = () => insertBlockAfter('list_unordered');
 
         const addOrderedBtn = document.createElement('button');
         addOrderedBtn.type = 'button';
         addOrderedBtn.className = 'quick-add-btn';
         addOrderedBtn.innerText = '+ הוסף רשימה ממוספרת';
-        addOrderedBtn.onclick = () => insertListAfter('list_ordered');
+        addOrderedBtn.onclick = () => insertBlockAfter('list_ordered');
 
         quickAdd = document.createElement('div');
         quickAdd.className = 'paragraph-quick-add';
-        quickAdd.append(addBulletBtn, addOrderedBtn);
+        quickAdd.append(addTextBtn, addBulletBtn, addOrderedBtn);
         // Referenced by updateNumbering() to keep this pinned to the
         // bottom of the group, wherever that currently is.
         block.quickAddEl = quickAdd;
