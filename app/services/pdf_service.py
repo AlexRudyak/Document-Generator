@@ -491,8 +491,9 @@ def _fade_signature(path, tmp_files, opacity=0.32):
 
 
 class _SignatureFlowable(Flowable):
-    """A signature image with a caption drawn on top of it, the image acting
-    as a faint watermark behind the (crisp, vector) text."""
+    """A signature caption, optionally drawn over an image faded so it acts
+    as a watermark behind the (crisp, vector) text. `image_path=None` draws
+    the caption alone, for a text-only "signature"."""
 
     def __init__(self, image_path, width, height, text, font_name):
         super().__init__()
@@ -509,11 +510,12 @@ class _SignatureFlowable(Flowable):
     def draw(self):
         canv = self.canv
         canv.saveState()
-        try:
-            canv.drawImage(self.image_path, 0, 0, width=self.width, height=self.height,
-                           mask='auto', preserveAspectRatio=True, anchor='c')
-        except Exception:
-            pass
+        if self.image_path:
+            try:
+                canv.drawImage(self.image_path, 0, 0, width=self.width, height=self.height,
+                               mask='auto', preserveAspectRatio=True, anchor='c')
+            except Exception:
+                pass
 
         # Word-wrap (shrinking the font if needed) so a longer caption fits
         # the box instead of running off its edge. _wrap_hard greedily wraps
@@ -822,17 +824,22 @@ def generate_pdf(document_number, content_blocks, classification=None, unique_id
             
         last_type = b_type
 
-    if signature_path and os.path.exists(signature_path):
+    sig_text = (signature_text or '').strip()
+    has_sig_image = bool(signature_path and os.path.exists(signature_path))
+    if has_sig_image or sig_text:
         story.append(Spacer(1, 0.8 * inch))
         try:
             sig_w, sig_h = 2 * inch, inch
-            sig_src = _fit_image(signature_path, sig_w, sig_h, img_cache, tmp_files)
-            sig_text = (signature_text or '').strip()
-            if sig_text:
-                sig_flowable = _SignatureFlowable(
-                    _fade_signature(sig_src, tmp_files), sig_w, sig_h, sig_text, font_bold)
+            if has_sig_image:
+                sig_src = _fit_image(signature_path, sig_w, sig_h, img_cache, tmp_files)
+                if sig_text:
+                    sig_flowable = _SignatureFlowable(
+                        _fade_signature(sig_src, tmp_files), sig_w, sig_h, sig_text, font_bold)
+                else:
+                    sig_flowable = Image(sig_src, width=sig_w, height=sig_h, hAlign='LEFT')
             else:
-                sig_flowable = Image(sig_src, width=sig_w, height=sig_h, hAlign='LEFT')
+                # No image at all — just the caption, e.g. a typed name.
+                sig_flowable = _SignatureFlowable(None, sig_w, sig_h, sig_text, font_bold)
             block = [
                 HRFlowable(width=2.2 * inch, thickness=0.75, color=INK,
                            spaceAfter=4, hAlign='LEFT'),

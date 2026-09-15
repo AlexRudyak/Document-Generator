@@ -14,6 +14,15 @@ def test_generate_pdf():
     assert pdf_bytes.startswith(b'%PDF-')
 
 
+def test_signature_text_renders_without_an_image():
+    # A caption with no signature_path/image should still show up (no image
+    # to fade behind it — just the text, same as a normal signature block).
+    pdf_bytes = generate_pdf("IT-002", [
+        {"type": "header", "text": "Title"},
+    ], signature_text="ישראל ישראלי")
+    assert pdf_bytes.startswith(b'%PDF-')
+
+
 def test_large_image_is_downscaled_not_embedded_raw(tmp_path):
     # A ~4000x3000 photo is ~several MB; if embedded raw the PDF balloons.
     big = tmp_path / "big.jpg"
