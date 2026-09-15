@@ -200,7 +200,6 @@ button, .btn-primary, .btn-secondary, .btn-modern, .btn-primary-modern {
 #blocks-container {
     display: flex;
     flex-direction: column;
-    gap: 15px;
     margin-bottom: 30px;
 }
 
@@ -210,6 +209,7 @@ button, .btn-primary, .btn-secondary, .btn-modern, .btn-primary-modern {
     align-items: flex-start;
     gap: 15px;
     padding: 15px;
+    margin-bottom: 15px;
     border: 1px solid var(--border);
     border-radius: 12px;
     background: var(--surface);
@@ -219,6 +219,23 @@ button, .btn-primary, .btn-secondary, .btn-modern, .btn-primary-modern {
 
 .block:hover {
     box-shadow: 0 4px 12px var(--shadow-md);
+}
+
+/* A list item added via a paragraph's quick-add buttons renders as part of
+   that paragraph's box instead of its own separate one: no gap/shadow/
+   radius between the two, only a hairline (the block above's own bottom
+   border) marking where one item ends and the next begins. */
+.block.block-grouped {
+    border-top: none;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+.block.block-group-has-next {
+    margin-bottom: 0;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    box-shadow: none;
 }
 
 /* Quick-add row attached under a paragraph block, for chaining a list

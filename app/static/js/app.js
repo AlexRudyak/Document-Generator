@@ -400,6 +400,19 @@ function updateNumbering() {
         }
         lastType = type;
     });
+
+    // Merge a paragraph with any list items added under it via its
+    // quick-add buttons into one visual box (see .block-grouped /
+    // .block-group-has-next): recomputed from live DOM order every time, so
+    // dragging things around keeps the merged box honest.
+    const blockList = Array.from(blocks);
+    blockList.forEach((block, i) => {
+        const grouped = block.dataset.groupWithPrev === 'true';
+        block.classList.toggle('block-grouped', grouped);
+        const next = blockList[i + 1];
+        const hasNext = !!next && next.dataset.groupWithPrev === 'true';
+        block.classList.toggle('block-group-has-next', hasNext);
+    });
 }
 
 function addBlock(type, text = '', level = -1, imageName = '') {
@@ -446,6 +459,9 @@ function addBlock(type, text = '', level = -1, imageName = '') {
     block.addEventListener('dragend', () => {
         block.classList.remove('dragging');
         block.draggable = false;
+        // A manually-moved block no longer belongs to wherever it used to be
+        // grouped; it can be regrouped with a fresh quick-add click if needed.
+        delete block.dataset.groupWithPrev;
         updateNumbering();
     });
 
@@ -532,7 +548,17 @@ function addBlock(type, text = '', level = -1, imageName = '') {
     const deleteBtn = document.createElement('button');
     deleteBtn.innerText = 'X';
     deleteBtn.className = 'delete-btn';
-    deleteBtn.onclick = () => { block.remove(); updateNumbering(); };
+    deleteBtn.onclick = () => {
+        // Deleting a group's head shouldn't leave its followers merging
+        // into whatever unrelated block now precedes them — promote the
+        // next one to be the new (ungrouped) head instead.
+        const next = block.nextElementSibling;
+        if (block.dataset.groupWithPrev !== 'true' && next && next.dataset.groupWithPrev === 'true') {
+            delete next.dataset.groupWithPrev;
+        }
+        block.remove();
+        updateNumbering();
+    };
     
     const indentLeftBtn = document.createElement('button');
     indentLeftBtn.innerText = '>';
@@ -566,11 +592,21 @@ function addBlock(type, text = '', level = -1, imageName = '') {
 
     // A paragraph gets its own "add a list right after this" shortcuts,
     // attached under the block instead of living in the general toolbar.
+    // Each addition lands at the end of the paragraph's existing group (not
+    // always right after the paragraph itself), so repeated clicks stack in
+    // the order they were added, and is flagged groupWithPrev so it renders
+    // merged into the paragraph's box (see updateNumbering).
     let quickAdd = null;
     if (type === 'paragraph') {
         const insertListAfter = (listType) => {
+            let anchor = block;
+            while (anchor.nextElementSibling && anchor.nextElementSibling.dataset.groupWithPrev === 'true') {
+                anchor = anchor.nextElementSibling;
+            }
             addBlock(listType, '', parseInt(block.dataset.level) || 0);
-            container.insertBefore(container.lastElementChild, block.nextSibling);
+            const newBlock = container.lastElementChild;
+            newBlock.dataset.groupWithPrev = 'true';
+            container.insertBefore(newBlock, anchor.nextSibling);
             updateNumbering();
         };
         const addBulletBtn = document.createElement('button');
