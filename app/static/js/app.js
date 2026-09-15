@@ -412,6 +412,17 @@ function updateNumbering() {
         const next = blockList[i + 1];
         const hasNext = !!next && next.dataset.groupWithPrev === 'true';
         block.classList.toggle('block-group-has-next', hasNext);
+
+        // A paragraph's quick-add row always sits at the bottom of its
+        // current group, not fixed under the paragraph itself, so it moves
+        // down as items are added and up again as they're removed.
+        if (block.quickAddEl) {
+            let tail = block;
+            while (tail.nextElementSibling && tail.nextElementSibling.dataset.groupWithPrev === 'true') {
+                tail = tail.nextElementSibling;
+            }
+            tail.append(block.quickAddEl);
+        }
     });
 }
 
@@ -556,6 +567,10 @@ function addBlock(type, text = '', level = -1, imageName = '') {
         if (block.dataset.groupWithPrev !== 'true' && next && next.dataset.groupWithPrev === 'true') {
             delete next.dataset.groupWithPrev;
         }
+        // Deleting the paragraph that owns the quick-add row removes the
+        // row too — there's no paragraph left for it to add lists under —
+        // rather than leaving it stranded wherever it last was pinned.
+        if (block.quickAddEl) block.quickAddEl.remove();
         block.remove();
         updateNumbering();
     };
@@ -624,6 +639,9 @@ function addBlock(type, text = '', level = -1, imageName = '') {
         quickAdd = document.createElement('div');
         quickAdd.className = 'paragraph-quick-add';
         quickAdd.append(addBulletBtn, addOrderedBtn);
+        // Referenced by updateNumbering() to keep this pinned to the
+        // bottom of the group, wherever that currently is.
+        block.quickAddEl = quickAdd;
     }
 
     block.append(dragHandle, ...(collapseBtn ? [collapseBtn] : []), label, input, controls,
