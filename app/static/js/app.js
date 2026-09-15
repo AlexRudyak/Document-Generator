@@ -10,8 +10,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('add-header-btn').addEventListener('click', () => addBlock('header'));
     document.getElementById('add-paragraph-btn').addEventListener('click', () => addBlock('paragraph'));
     document.getElementById('add-table-btn').addEventListener('click', () => addBlock('table'));
-    document.getElementById('add-list-btn').addEventListener('click', () => addBlock('list_unordered'));
-    document.getElementById('add-ordered-list-btn').addEventListener('click', () => addBlock('list_ordered'));
     document.getElementById('add-image-btn').addEventListener('click', () => addBlock('image'));
     
     document.getElementById('save-template-btn').addEventListener('click', saveTemplate);
@@ -565,8 +563,35 @@ function addBlock(type, text = '', level = -1, imageName = '') {
     const controls = document.createElement('div');
     controls.className = 'block-controls';
     controls.append(indentRightBtn, indentLeftBtn, deleteBtn);
-    
-    block.append(dragHandle, ...(collapseBtn ? [collapseBtn] : []), label, input, controls);
+
+    // A paragraph gets its own "add a list right after this" shortcuts,
+    // attached under the block instead of living in the general toolbar.
+    let quickAdd = null;
+    if (type === 'paragraph') {
+        const insertListAfter = (listType) => {
+            addBlock(listType, '', parseInt(block.dataset.level) || 0);
+            container.insertBefore(container.lastElementChild, block.nextSibling);
+            updateNumbering();
+        };
+        const addBulletBtn = document.createElement('button');
+        addBulletBtn.type = 'button';
+        addBulletBtn.className = 'quick-add-btn';
+        addBulletBtn.innerText = '+ הוסף תבליטים';
+        addBulletBtn.onclick = () => insertListAfter('list_unordered');
+
+        const addOrderedBtn = document.createElement('button');
+        addOrderedBtn.type = 'button';
+        addOrderedBtn.className = 'quick-add-btn';
+        addOrderedBtn.innerText = '+ הוסף רשימה ממוספרת';
+        addOrderedBtn.onclick = () => insertListAfter('list_ordered');
+
+        quickAdd = document.createElement('div');
+        quickAdd.className = 'paragraph-quick-add';
+        quickAdd.append(addBulletBtn, addOrderedBtn);
+    }
+
+    block.append(dragHandle, ...(collapseBtn ? [collapseBtn] : []), label, input, controls,
+                ...(quickAdd ? [quickAdd] : []));
     container.append(block);
     updateNumbering();
 }

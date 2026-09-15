@@ -206,6 +206,7 @@ button, .btn-primary, .btn-secondary, .btn-modern, .btn-primary-modern {
 
 .block {
     display: flex;
+    flex-wrap: wrap;
     align-items: flex-start;
     gap: 15px;
     padding: 15px;
@@ -218,6 +219,32 @@ button, .btn-primary, .btn-secondary, .btn-modern, .btn-primary-modern {
 
 .block:hover {
     box-shadow: 0 4px 12px var(--shadow-md);
+}
+
+/* Quick-add row attached under a paragraph block, for chaining a list
+   directly after it instead of hunting for the buttons in the toolbar. */
+.paragraph-quick-add {
+    flex-basis: 100%;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.quick-add-btn {
+    padding: 6px 12px;
+    border: 1px dashed var(--accent-soft-border);
+    border-radius: 8px;
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.quick-add-btn:hover {
+    background: var(--accent-soft-hover);
 }
 
 .collapse-toggle {
