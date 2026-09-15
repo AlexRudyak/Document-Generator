@@ -713,25 +713,24 @@ textarea.block-input {
     border-radius: 3px;
 }
 
-/* Contact details: a couple of short lines under the left logo corner */
+/* Contact details: a couple of short target rows under the left logo corner */
 .lp-contact-lines {
     position: absolute;
     left: 8px;
-    top: 32px;
+    top: 34px;
     display: flex;
     flex-direction: column;
     gap: 4px;
 }
 
-.lp-contact-lines span {
+.lp-contact-lines .lp-target {
     display: block;
-    height: 3px;
+    height: 5px;
     border-radius: 2px;
-    background: var(--accent-soft-border);
 }
 
-.lp-contact-lines span:nth-child(1) { width: 34px; }
-.lp-contact-lines span:nth-child(2) { width: 24px; }
+.lp-contact-lines .lp-target:nth-child(1) { width: 36px; }
+.lp-contact-lines .lp-target:nth-child(2) { width: 26px; }
 
 /* Full-width setting card (contact details) */
 .setting-wide {
