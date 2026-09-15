@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('add-header-btn').addEventListener('click', () => addBlock('header'));
     document.getElementById('add-paragraph-btn').addEventListener('click', () => addBlock('paragraph'));
     document.getElementById('add-table-btn').addEventListener('click', () => addBlock('table'));
+    document.getElementById('add-list-btn').addEventListener('click', () => addBlock('list_unordered'));
+    document.getElementById('add-ordered-list-btn').addEventListener('click', () => addBlock('list_ordered'));
     document.getElementById('add-image-btn').addEventListener('click', () => addBlock('image'));
     
     document.getElementById('save-template-btn').addEventListener('click', saveTemplate);
@@ -560,31 +562,10 @@ function addBlock(type, text = '', level = -1, imageName = '') {
         }
     };
 
-    // Paragraph and list blocks are all just "text content" — let one type
-    // switch to another in place instead of needing separate add buttons.
-    let typeSelect = null;
-    if (type === 'paragraph' || type === 'list_unordered' || type === 'list_ordered') {
-        typeSelect = document.createElement('select');
-        typeSelect.className = 'block-type-select';
-        typeSelect.title = 'סוג תוכן';
-        [['paragraph', 'פסקה רגילה'], ['list_unordered', 'תבליטים'], ['list_ordered', 'רשימה ממוספרת']]
-            .forEach(([val, optLabel]) => {
-                const opt = document.createElement('option');
-                opt.value = val;
-                opt.textContent = optLabel;
-                typeSelect.append(opt);
-            });
-        typeSelect.value = type;
-        typeSelect.addEventListener('change', () => {
-            block.dataset.type = typeSelect.value;
-            updateNumbering();
-        });
-    }
-
     const controls = document.createElement('div');
     controls.className = 'block-controls';
-    controls.append(...(typeSelect ? [typeSelect] : []), indentRightBtn, indentLeftBtn, deleteBtn);
-
+    controls.append(indentRightBtn, indentLeftBtn, deleteBtn);
+    
     block.append(dragHandle, ...(collapseBtn ? [collapseBtn] : []), label, input, controls);
     container.append(block);
     updateNumbering();

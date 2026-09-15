@@ -308,24 +308,6 @@ textarea.block-input {
     background: var(--danger-soft-hover);
 }
 
-/* Paragraph <-> list type switcher, shown only on paragraph/list blocks */
-.block-type-select {
-    padding: 8px 10px;
-    border: none;
-    border-radius: 8px;
-    background: var(--surface-muted);
-    color: var(--text-muted);
-    font-family: inherit;
-    font-weight: 600;
-    font-size: 13px;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.block-type-select:hover {
-    background: var(--border);
-}
-
 /* Actions Toolbar */
 .actions {
     display: flex;
