@@ -33,7 +33,7 @@ to reorder RTL text for ReportLab, which has no native BiDi support.
 
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, PageBreak, Image, Table, TableStyle,
-    HRFlowable, KeepTogether,
+    HRFlowable, KeepTogether, Flowable,
 )
 from reportlab.platypus.tableofcontents import TableOfContents
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -441,6 +441,55 @@ def _fit_image(path, max_w_pt, max_h_pt, cache, tmp_files):
     return result
 
 
+def _fade_signature(path, tmp_files, opacity=0.32):
+    """Flatten `path` onto white (so a transparent background doesn't leave
+    stray pixels) then blend it toward white at `opacity`, producing a faint
+    version that can sit behind an overlaid caption like a watermark."""
+    try:
+        with PILImage.open(path) as im:
+            im = im.convert('RGBA')
+            flat = PILImage.new('RGB', im.size, (255, 255, 255))
+            flat.paste(im, mask=im.split()[3])
+            faded = PILImage.blend(PILImage.new('RGB', im.size, (255, 255, 255)), flat, opacity)
+            fd, out_path = tempfile.mkstemp(suffix='.png')
+            os.close(fd)
+            faded.save(out_path, 'PNG')
+            tmp_files.append(out_path)
+            return out_path
+    except Exception:
+        return path
+
+
+class _SignatureFlowable(Flowable):
+    """A signature image with a caption drawn on top of it, the image acting
+    as a faint watermark behind the (crisp, vector) text."""
+
+    def __init__(self, image_path, width, height, text, font_name):
+        super().__init__()
+        self.image_path = image_path
+        self.width = width
+        self.height = height
+        self.text = text
+        self.font_name = font_name
+        self.hAlign = 'LEFT'
+
+    def wrap(self, avail_width, avail_height):
+        return self.width, self.height
+
+    def draw(self):
+        canv = self.canv
+        canv.saveState()
+        try:
+            canv.drawImage(self.image_path, 0, 0, width=self.width, height=self.height,
+                           mask='auto', preserveAspectRatio=True, anchor='c')
+        except Exception:
+            pass
+        canv.setFont(self.font_name, 11)
+        canv.setFillColor(INK)
+        canv.drawCentredString(self.width / 2.0, self.height / 2.0 - 4, get_display(self.text))
+        canv.restoreState()
+
+
 def _draw_watermark(canv, text, font_name):
     """Big faint diagonal watermark, drawn at page start so content sits on top.
 
@@ -464,8 +513,8 @@ def _draw_watermark(canv, text, font_name):
 
 
 def generate_pdf(document_number, content_blocks, classification=None, unique_identifier='', revision_number=1,
-                 signature_path=None, logo_left_path=None, logo_right_path=None, contact_details=None,
-                 watermark=None):
+                 signature_path=None, signature_text=None, logo_left_path=None, logo_right_path=None,
+                 contact_details=None, watermark=None):
     """Render ``content_blocks`` to PDF bytes.
 
     Parameters mirror the persisted ``Document`` row. ``content_blocks`` is the
@@ -727,14 +776,18 @@ def generate_pdf(document_number, content_blocks, classification=None, unique_id
     if signature_path and os.path.exists(signature_path):
         story.append(Spacer(1, 0.8 * inch))
         try:
-            sig_src = _fit_image(signature_path, 2 * inch, inch, img_cache, tmp_files)
+            sig_w, sig_h = 2 * inch, inch
+            sig_src = _fit_image(signature_path, sig_w, sig_h, img_cache, tmp_files)
+            sig_text = (signature_text or '').strip()
+            if sig_text:
+                sig_flowable = _SignatureFlowable(
+                    _fade_signature(sig_src, tmp_files), sig_w, sig_h, sig_text, font_bold)
+            else:
+                sig_flowable = Image(sig_src, width=sig_w, height=sig_h, hAlign='LEFT')
             block = [
                 HRFlowable(width=2.2 * inch, thickness=0.75, color=INK,
                            spaceAfter=4, hAlign='LEFT'),
-                Image(sig_src, width=2 * inch, height=1 * inch, hAlign='LEFT'),
-                Paragraph(rtl_markup("חתימה מאושרת"), ParagraphStyle(
-                    name='Sig', fontName=font_bold, fontSize=10, textColor=MUTED,
-                    alignment=TA_LEFT, spaceBefore=4)),
+                sig_flowable,
             ]
             story.append(KeepTogether(block))
         except Exception:

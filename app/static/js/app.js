@@ -94,7 +94,7 @@ const WATERMARK_DEFAULT = 'טיוטה';
 const OPTIONAL_SETTINGS = [
     { key: 'classification', toggle: 'classify-toggle',   control: 'classify-control' },
     { key: 'watermark',      toggle: 'wm-toggle',         control: 'wm-control',         text: 'wm-text', default: WATERMARK_DEFAULT },
-    { key: 'signature',      toggle: 'sig-toggle',        control: 'sig-control',        hidden: 'signature-path',   status: 'signature-status' },
+    { key: 'signature',      toggle: 'sig-toggle',        control: 'sig-control',        hidden: 'signature-path',   status: 'signature-status', caption: 'signature-text' },
     { key: 'logo_right',     toggle: 'logo-right-toggle', control: 'logo-right-control', hidden: 'logo-right-path',  status: 'logo-right-status', thumb: 'logo-right-thumb' },
     { key: 'logo_left',      toggle: 'logo-left-toggle',  control: 'logo-left-control',  hidden: 'logo-left-path',   status: 'logo-left-status',  thumb: 'logo-left-thumb'  },
     { key: 'contact',        toggle: 'contact-toggle',    control: 'contact-control',    rows: 'contact-rows' },
@@ -121,6 +121,7 @@ function syncSetting(s) {
         const st = document.getElementById(s.status);
         if (st) { st.textContent = ''; st.className = 'file-name'; }
         if (s.thumb) setThumb(s.thumb, null);
+        if (s.caption) document.getElementById(s.caption).value = '';
     }
     if (!on && s.key === 'signature') {
         const panel = document.getElementById('sig-draw-panel');
@@ -137,7 +138,7 @@ function syncSetting(s) {
 // Turn a setting on with a stored value, or off when it is empty:
 //   classification / watermark -> string   signature/logo -> path (+ previewUrl)
 //   contact                    -> [{label, value}, ...]
-function applySetting(key, value, previewUrl) {
+function applySetting(key, value, previewUrl, caption) {
     const s = OPTIONAL_SETTINGS.find(x => x.key === key);
     document.getElementById(s.toggle).checked = !!value;
     if (value) {
@@ -155,6 +156,7 @@ function applySetting(key, value, previewUrl) {
             st.textContent = '✓ קובץ קיים';
             st.className = 'file-name ok';
             if (s.thumb) setThumb(s.thumb, previewUrl || null);
+            if (s.caption) document.getElementById(s.caption).value = caption || '';
         }
     }
     syncSetting(s);
@@ -633,7 +635,7 @@ function loadDocument(id) {
             document.getElementById('revision-alert').style.display = 'block';
             applySetting('classification', d.classification);
             applySetting('watermark', d.watermark);
-            applySetting('signature', d.signature_path);
+            applySetting('signature', d.signature_path, null, d.signature_text);
             applySetting('logo_right', d.logo_right_path, d.logo_right_url);
             applySetting('logo_left', d.logo_left_path, d.logo_left_url);
             applySetting('contact', d.contact_details);
@@ -804,6 +806,7 @@ function generateDocument() {
         watermark: document.getElementById('wm-toggle').checked
             ? (document.getElementById('wm-text').value.trim() || WATERMARK_DEFAULT) : null,
         signature_path: document.getElementById('signature-path').value || null,
+        signature_text: document.getElementById('signature-text').value.trim() || null,
         logo_right_path: document.getElementById('logo-right-path').value || null,
         logo_left_path: document.getElementById('logo-left-path').value || null,
         contact_details: document.getElementById('contact-toggle').checked ? getContactDetails() : null,

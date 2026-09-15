@@ -72,6 +72,16 @@ There is no build step for the front-end (vanilla JS/CSS served from
   watermark drawn on every page via the `onFirstPage`/`onLaterPages` hooks
   (so it sits *behind* content), light grey rather than alpha (ReportLab does
   not reliably emit fill alpha). Editor default is `טיוטה`.
+- **Signature.** `Document.signature_path` is the uploaded/drawn image (same
+  `/api/upload` flow as the logos); the editor's "✍️ צייר חתימה" panel lets the
+  user draw one with the mouse/touch/pen on a `<canvas>` instead, converting it
+  to a PNG blob and uploading it the same way. `Document.signature_text`
+  (≤120 chars, optional) is an overlay caption: when set, `pdf_service`
+  fades the signature image toward white (`_fade_signature`, PIL-composited
+  over white rather than relying on PDF alpha) and draws the caption as crisp
+  vector text on top of it via `_SignatureFlowable`, so the signature reads as
+  a watermark behind the name/title. With no caption the image renders at
+  full strength, unchanged.
 - **Contact block.** `Document.contact_details` is a JSON array of
   `{"label", "value"}` rows. Rendered by `NumberedCanvas.draw_page_number` only
   on `self._pageNumber == 1`, left-aligned below the left logo. Blank rows are

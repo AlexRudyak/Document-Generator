@@ -32,6 +32,9 @@ class Document(db.Model):
     revision_number = db.Column(db.Integer, default=1, nullable=False)
     classification = db.Column(db.String(50), nullable=True)  # None = unclassified
     signature_path = db.Column(db.String(255), nullable=True)
+    # Optional caption drawn over the signature image, which is faded to act
+    # as a watermark behind it (e.g. a name / title under a drawn signature).
+    signature_text = db.Column(db.String(120), nullable=True)
     # Optional per-document header logos; a blank side leaves that corner empty.
     logo_left_path = db.Column(db.String(255), nullable=True)
     logo_right_path = db.Column(db.String(255), nullable=True)

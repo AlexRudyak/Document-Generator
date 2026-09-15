@@ -168,6 +168,7 @@ def get_document(doc_id):
         "classification": d.classification,
         "unique_identifier": d.unique_identifier,
         "signature_path": d.signature_path,
+        "signature_text": d.signature_text,
         "logo_left_path": d.logo_left_path,
         "logo_right_path": d.logo_right_path,
         "contact_details": json.loads(d.contact_details) if d.contact_details else None,
@@ -209,6 +210,7 @@ def generate_document():
     parent_id = data.get('parent_document_id')
     classification = (data.get('classification') or '').strip() or None
     signature_path = data.get('signature_path') or None
+    signature_text = (data.get('signature_text') or '').strip()[:120] or None
     logo_left_path = data.get('logo_left_path') or None
     logo_right_path = data.get('logo_right_path') or None
     # Drop contact rows that are entirely blank.
@@ -241,6 +243,7 @@ def generate_document():
         revision_number=revision_number,
         classification=classification,
         signature_path=signature_path,
+        signature_text=signature_text,
         logo_left_path=logo_left_path,
         logo_right_path=logo_right_path,
         contact_details=json.dumps(contact_details, ensure_ascii=False) if contact_details else None,
@@ -251,8 +254,8 @@ def generate_document():
     db.session.commit()
 
     pdf_bytes = generate_pdf(doc_num, content_list, classification, unique_identifier, revision_number,
-                             signature_path, logo_left_path=logo_left_path, logo_right_path=logo_right_path,
-                             contact_details=contact_details, watermark=watermark)
+                             signature_path, signature_text=signature_text, logo_left_path=logo_left_path,
+                             logo_right_path=logo_right_path, contact_details=contact_details, watermark=watermark)
     
     return send_file(
         io.BytesIO(pdf_bytes),

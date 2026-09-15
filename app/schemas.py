@@ -43,6 +43,8 @@ class DocumentSchema(Schema):
     # Optional: omit / null / "" -> the document is unclassified (no banners).
     classification = fields.String(required=False, allow_none=True, load_default=None)
     signature_path = fields.String(required=False, allow_none=True)
+    signature_text = fields.String(required=False, allow_none=True, load_default=None,
+                                   validate=_reject_html)
     logo_left_path = fields.String(required=False, allow_none=True)
     logo_right_path = fields.String(required=False, allow_none=True)
     contact_details = fields.List(fields.Nested(ContactRowSchema), required=False,

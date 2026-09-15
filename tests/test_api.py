@@ -171,6 +171,28 @@ def test_contact_details_rejects_html(client):
     assert res.status_code == 400
 
 
+def test_signature_text_round_trip(client):
+    png = b'\x89PNG\r\n\x1a\n'
+    up = client.post('/api/upload', data={'file': (io.BytesIO(png), 's.png')},
+                     content_type='multipart/form-data')
+    path = up.get_json()['filepath']
+    res = client.post('/api/documents/generate', json={
+        "content": [{"type": "header", "text": "H"}],
+        "signature_path": path,
+        "signature_text": "ישראל ישראלי, מנכ\"ל",
+    })
+    assert res.status_code == 200
+    doc_id = client.get('/api/documents').get_json()[0]['id']
+    assert client.get(f'/api/documents/{doc_id}').get_json()['signature_text'] == 'ישראל ישראלי, מנכ"ל'
+
+
+def test_signature_text_rejects_html(client):
+    res = client.post('/api/documents/generate', json={
+        "content": [{"type": "header", "text": "H"}], "signature_text": "<b>x</b>",
+    })
+    assert res.status_code == 400
+
+
 def test_generate_document_creates_revision(client):
     first = client.post('/api/documents/generate', json={
         "content": [{"type": "header", "text": "V1"}],
