@@ -339,7 +339,7 @@ let currentParentDocId = null;
 
 const typeLabels = {
     'header': 'כותרת',
-    'paragraph': 'פסקה',
+    'paragraph': 'טקסט',
     'table': 'טבלה (JSON)',
     'list_unordered': 'תבליטים',
     'list_ordered': 'רשימה ממוספרת',
