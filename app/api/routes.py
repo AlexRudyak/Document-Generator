@@ -6,6 +6,7 @@ Endpoints
 ``POST /templates``            create a template
 ``GET  /documents``            list documents (optional ``?q=`` full-text-ish filter)
 ``GET  /documents/<id>``       fetch a single document's blocks
+``GET  /documents/<id>/pdf``   reprint a stored document's PDF (no new revision); ``?highlight=0`` strips diff markup
 ``POST /documents/generate``   validate + persist + render a PDF (returns the file)
 ``POST /upload``               store an image, return its server path
 
@@ -142,17 +143,22 @@ def get_documents():
         try:
             content_list = json.loads(d.content)
             title = next((block['text'] for block in content_list if block.get('type') == 'title'), 'ללא כותרת')
+            has_highlights = any(b.get('_highlight') for b in content_list)
         except:
             title = 'ללא כותרת'
-            
+            has_highlights = False
+
         results.append({
-            "id": d.id, 
+            "id": d.id,
             "document_number": d.document_number,
             "unique_identifier": d.unique_identifier,
             "title": title,
             "classification": d.classification,
-            "created_date": d.created_date.isoformat(), 
-            "revision_number": d.revision_number
+            "created_date": d.created_date.isoformat(),
+            "revision_number": d.revision_number,
+            # Lets the history page offer a "reprint without the yellow diff
+            # markup" action only on revisions that actually carry any.
+            "has_highlights": has_highlights,
         })
     return jsonify(results)
 
@@ -178,6 +184,35 @@ def get_document(doc_id):
         "logo_left_url": upload_url(os.path.basename(d.logo_left_path)) if d.logo_left_path else None,
         "logo_right_url": upload_url(os.path.basename(d.logo_right_path)) if d.logo_right_path else None,
     })
+
+
+@api_bp.route('/documents/<int:doc_id>/pdf', methods=['GET'])
+def download_document_pdf(doc_id):
+    """Re-render a stored document's PDF exactly as saved (a "reprint" —
+    unlike /documents/generate this creates no new revision row). Pass
+    ``?highlight=0`` to strip any baked-in revision-diff highlighting, e.g.
+    to hand out a clean copy of a revision that was generated with it on."""
+    d = Document.query.get_or_404(doc_id)
+    content_list = json.loads(d.content)
+    keep_highlight = request.args.get('highlight', '1') not in ('0', 'false', 'False')
+    if not keep_highlight:
+        for b in content_list:
+            b.pop('_highlight', None)
+
+    pdf_bytes = generate_pdf(
+        d.document_number, content_list, d.classification, d.unique_identifier, d.revision_number,
+        d.signature_path, signature_text=d.signature_text, logo_left_path=d.logo_left_path,
+        logo_right_path=d.logo_right_path,
+        contact_details=json.loads(d.contact_details) if d.contact_details else None,
+        watermark=d.watermark,
+    )
+    suffix = '' if keep_highlight else '_clean'
+    return send_file(
+        io.BytesIO(pdf_bytes),
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=f"{d.document_number}_Rev{d.revision_number}{suffix}.pdf"
+    )
 
 
 @api_bp.route('/documents', methods=['DELETE'])

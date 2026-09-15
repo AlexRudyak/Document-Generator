@@ -56,10 +56,15 @@ There is no build step for the front-end (vanilla JS/CSS served from
   is deliberately positional/simple. Highlighting is opt-out per generation: the
   revision banner's "הדגש שינויים" checkbox (checked by default) sends
   `highlight_changes`, and `generate_document` skips `calculate_diff` entirely
-  when it's false, so the revision renders with no diff markup at all. The
-  backend inherits only the parent's header logos (`logo_left_path` /
-  `logo_right_path`) unless overridden; the editor re-sends the other optional
-  settings when loading a document.
+  when it's false, so the revision renders with no diff markup at all. For a
+  revision already saved *with* highlighting, `GET /documents/<id>/pdf?highlight=0`
+  reprints its exact stored content minus the `_highlight` flags — a one-off
+  clean copy, not a new revision (contrast with `/documents/generate`, which
+  always persists a row). The history page surfaces this as a "🧹 הורד PDF
+  ללא סימון שינויים" button, shown only when `GET /documents`' `has_highlights`
+  flag is true for that row. The backend inherits only the parent's header
+  logos (`logo_left_path` / `logo_right_path`) unless overridden; the editor
+  re-sends the other optional settings when loading a document.
 - **Header logos.** `logo_left_path` / `logo_right_path` are optional per-document
   `Document` columns (uploaded via `/api/upload` like the signature). When a side
   has no image, that header corner is left empty — no fallback. Right = the

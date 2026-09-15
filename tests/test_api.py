@@ -211,6 +211,47 @@ def test_generate_document_creates_revision(client):
     assert 'Rev2' in second.headers['Content-Disposition']
 
 
+def test_documents_list_flags_highlighted_revisions(client):
+    client.post('/api/documents/generate', json={"content": [{"type": "header", "text": "V1"}]})
+    parent_id = client.get('/api/documents').get_json()[0]['id']
+
+    client.post('/api/documents/generate', json={
+        "content": [{"type": "header", "text": "V2 changed"}],
+        "parent_document_id": parent_id,
+    })
+    listed = client.get('/api/documents').get_json()
+    by_id = {d['id']: d for d in listed}
+    assert by_id[parent_id]['has_highlights'] is False
+    child_id = next(d['id'] for d in listed if d['id'] != parent_id)
+    assert by_id[child_id]['has_highlights'] is True
+
+
+def test_reprint_pdf_can_strip_highlight_without_new_revision(client):
+    client.post('/api/documents/generate', json={"content": [{"type": "header", "text": "V1"}]})
+    parent_id = client.get('/api/documents').get_json()[0]['id']
+    client.post('/api/documents/generate', json={
+        "content": [{"type": "header", "text": "V2 changed"}],
+        "parent_document_id": parent_id,
+    })
+    child_id = next(d['id'] for d in client.get('/api/documents').get_json() if d['id'] != parent_id)
+    before_count = len(client.get('/api/documents').get_json())
+
+    with_highlight = client.get(f'/api/documents/{child_id}/pdf')
+    assert with_highlight.status_code == 200
+    assert with_highlight.mimetype == 'application/pdf'
+
+    clean = client.get(f'/api/documents/{child_id}/pdf?highlight=0')
+    assert clean.status_code == 200
+    assert 'clean' in clean.headers['Content-Disposition']
+
+    # A reprint doesn't persist a new row.
+    assert len(client.get('/api/documents').get_json()) == before_count
+
+
+def test_reprint_pdf_404_for_missing_document(client):
+    assert client.get('/api/documents/999999/pdf').status_code == 404
+
+
 def test_revision_highlight_changes_default_on(client):
     first = client.post('/api/documents/generate', json={
         "content": [{"type": "header", "text": "V1"}],
