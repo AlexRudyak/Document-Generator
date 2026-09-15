@@ -476,14 +476,16 @@ function addBlock(type, text = '', level = -1, imageName = '') {
         updateNumbering();
     });
 
-    let collapseBtn = null;
+    // Always created (not just for headers) and reserved via visibility —
+    // not display — when inactive, so every block type's input starts at
+    // the same x regardless of whether it actually has a collapse toggle.
+    const collapseBtn = document.createElement('button');
+    collapseBtn.type = 'button';
+    collapseBtn.className = 'collapse-toggle';
+    collapseBtn.title = 'כווץ / הרחב סעיף';
+    collapseBtn.innerText = '▼';
+    collapseBtn.hidden = !(type === 'header' && level === 0);
     if (type === 'header') {
-        collapseBtn = document.createElement('button');
-        collapseBtn.type = 'button';
-        collapseBtn.className = 'collapse-toggle';
-        collapseBtn.title = 'כווץ / הרחב סעיף';
-        collapseBtn.innerText = '▼';
-        collapseBtn.hidden = level !== 0;
         collapseBtn.onclick = () => {
             block.dataset.collapsed = block.dataset.collapsed === 'true' ? 'false' : 'true';
             updateNumbering();
@@ -658,7 +660,7 @@ function addBlock(type, text = '', level = -1, imageName = '') {
         block.quickAddEl = quickAdd;
     }
 
-    block.append(dragHandle, ...(collapseBtn ? [collapseBtn] : []), label, input, controls,
+    block.append(dragHandle, collapseBtn, label, input, controls,
                 ...(quickAdd ? [quickAdd] : []));
     container.append(block);
     updateNumbering();
