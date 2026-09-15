@@ -660,6 +660,79 @@ textarea.block-input {
     background: repeating-linear-gradient(var(--list-stripe) 0 3px, transparent 3px 9px);
 }
 
+/* Classification: full-bleed bands top & bottom of the page */
+.lp-cls-band {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 7px;
+    background: var(--accent-soft);
+    border: 1px dashed var(--accent-soft-border);
+}
+
+.lp-cls-band.lp-cls-top { top: 0; border-radius: 5px 5px 0 0; }
+.lp-cls-band.lp-cls-bottom { bottom: 0; border-radius: 0 0 5px 5px; }
+
+/* Watermark: faint diagonal ghost text across the whole page */
+.lp-watermark-text {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: rotate(-28deg);
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--accent);
+    opacity: 0.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100px;
+    pointer-events: none;
+}
+
+/* Signature: small ruled line + image placeholder, bottom-left */
+.lp-sig-line {
+    position: absolute;
+    left: 8px;
+    bottom: 24px;
+    width: 32px;
+    height: 1px;
+    background: var(--border-strong);
+}
+
+.lp-sig-box {
+    position: absolute;
+    left: 8px;
+    bottom: 8px;
+    width: 32px;
+    height: 14px;
+    border: 1px dashed var(--accent-soft-border);
+    background: var(--accent-soft);
+    border-radius: 3px;
+}
+
+/* Contact details: a couple of short lines under the left logo corner */
+.lp-contact-lines {
+    position: absolute;
+    left: 8px;
+    top: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.lp-contact-lines span {
+    display: block;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--accent-soft-border);
+}
+
+.lp-contact-lines span:nth-child(1) { width: 34px; }
+.lp-contact-lines span:nth-child(2) { width: 24px; }
+
 /* Full-width setting card (contact details) */
 .setting-wide {
     grid-column: 1 / -1;

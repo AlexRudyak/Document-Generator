@@ -49,6 +49,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('contact-add').addEventListener('click', () => addContactRow());
 
+    document.getElementById('wm-text').addEventListener('input', (e) => {
+        document.getElementById('wm-preview-text').innerText = e.target.value.trim() || WATERMARK_DEFAULT;
+    });
+
     const container = document.getElementById('blocks-container');
     container.addEventListener('dragover', (e) => {
         e.preventDefault();

@@ -60,6 +60,14 @@
                         <span class="toggle-track"><span class="toggle-thumb"></span></span>
                         <span class="toggle-label">סיווג מסמך</span>
                     </label>
+                    <div class="logo-preview" title="הסיווג מוצג ברצועה מלאה בראש ובתחתית כל עמוד">
+                        <div class="lp-page">
+                            <span class="lp-cls-band lp-cls-top"></span>
+                            <span class="lp-lines"></span>
+                            <span class="lp-cls-band lp-cls-bottom"></span>
+                        </div>
+                        <span class="lp-caption">בראש ובתחתית כל עמוד</span>
+                    </div>
                     <div class="setting-control" id="classify-control" hidden>
                         <select id="doc-classification">
                             <option value="בלמ&quot;ס">בלמ"ס</option>
@@ -77,6 +85,13 @@
                         <span class="toggle-track"><span class="toggle-thumb"></span></span>
                         <span class="toggle-label">סימן מים</span>
                     </label>
+                    <div class="logo-preview" title="סימן המים מוצג באלכסון, דהוי, מאחורי תוכן העמוד">
+                        <div class="lp-page">
+                            <span class="lp-watermark-text" id="wm-preview-text">טיוטה</span>
+                            <span class="lp-rule"></span><span class="lp-lines"></span>
+                        </div>
+                        <span class="lp-caption">אלכסוני ושקוף, מאחורי התוכן</span>
+                    </div>
                     <div class="setting-control" id="wm-control" hidden>
                         <input type="text" id="wm-text" class="wm-input" value="טיוטה" maxlength="60" placeholder="טקסט סימן המים">
                     </div>
@@ -88,6 +103,14 @@
                         <span class="toggle-track"><span class="toggle-thumb"></span></span>
                         <span class="toggle-label">חתימה</span>
                     </label>
+                    <div class="logo-preview" title="החתימה מוצגת בתחתית המסמך, מיושרת לשמאל">
+                        <div class="lp-page">
+                            <span class="lp-lines"></span>
+                            <span class="lp-sig-line"></span>
+                            <span class="lp-sig-box"></span>
+                        </div>
+                        <span class="lp-caption">בתחתית המסמך, משמאל</span>
+                    </div>
                     <div class="setting-control" id="sig-control" hidden>
                         <input type="file" id="doc-signature" accept="image/*" class="file-input">
                         <label for="doc-signature" class="file-btn">בחר קובץ…</label>
@@ -146,6 +169,15 @@
                         <span class="toggle-track"><span class="toggle-thumb"></span></span>
                         <span class="toggle-label">פרטי קשר</span>
                     </label>
+                    <div class="logo-preview" title="פרטי הקשר מוצגים בעמוד הראשון בלבד, משמאל מתחת ללוגו">
+                        <div class="lp-page">
+                            <span class="lp-corner lp-left"></span>
+                            <span class="lp-corner lp-right"></span>
+                            <span class="lp-rule"></span>
+                            <span class="lp-contact-lines"><span></span><span></span></span>
+                        </div>
+                        <span class="lp-caption">עמוד ראשון בלבד, משמאל</span>
+                    </div>
                     <div class="setting-control setting-control--stack" id="contact-control" hidden>
                         <p class="setting-hint">מופיע בכותרת העמוד הראשון בלבד, מיושר לשמאל מתחת ללוגו השמאלי.</p>
                         <div class="contact-rows" id="contact-rows"></div>
