@@ -10,7 +10,7 @@ figure list, revision tracking, per‑document header logos, an optional contact
 block and watermark, templates you can share, and a one‑file Windows build.**
 
 [![Release](https://img.shields.io/github/v/release/AlexRudyak/Document-Generator?color=4F46E5&label=release)](https://github.com/AlexRudyak/Document-Generator/releases)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![License: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-orange.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/flask-3.0-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 
@@ -248,7 +248,9 @@ validation on new endpoints, and a test for every fix.
 
 ## 📄 License
 
-[MIT](LICENSE) © Document Generator contributors.
+[PolyForm Noncommercial 1.0.0](LICENSE) © Document Generator contributors —
+free for noncommercial use; commercial use requires a separate license from
+the copyright holder.
 
 <sub>Bundled font: **DejaVu Sans** (see `app/static/assets/fonts/LICENSE-DejaVu.txt`).</sub>
 
