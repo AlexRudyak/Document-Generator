@@ -162,6 +162,7 @@ curl -X POST http://127.0.0.1:5000/api/documents/generate \
 | `POST /api/templates/import` | Create templates from an uploaded JSON file |
 | `GET  /api/documents?q=` | List / search documents |
 | `GET  /api/documents/<id>` | Fetch one document's blocks |
+| `DELETE /api/documents` | Bulk-delete documents (`{"ids": [1, 2, ...]}`) |
 | `POST /api/documents/generate` | Validate, persist, and render a PDF |
 | `POST /api/upload` | Upload an image (multipart `file`) → returns a path |
 

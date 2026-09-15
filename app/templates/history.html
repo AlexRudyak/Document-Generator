@@ -59,6 +59,29 @@
         .history-table td { padding: 16px; border-bottom: 1px solid var(--border); font-size: 16px; color: var(--text); }
         .history-table tr { transition: background-color 0.15s; }
         .history-table tr:hover { background-color: var(--surface-alt); cursor: pointer; }
+        .checkbox-cell { width: 44px; }
+        .row-checkbox, #select-all-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--accent);
+        }
+
+        /* Bulk delete bar */
+        .bulk-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding: 12px 18px;
+            background: var(--accent-soft);
+            border: 1px solid var(--accent-soft-border);
+            border-radius: 10px;
+        }
+        .bulk-bar[hidden] { display: none; }
+        .bulk-bar-count { font-weight: 700; color: var(--text-strong); flex: 1; }
+        .btn-danger-soft { background: var(--danger-soft); color: var(--danger); }
+        .btn-danger-soft:hover { background: var(--danger-soft-hover); }
 
         /* Badges */
         .badge { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; }
@@ -88,10 +111,17 @@
             <input type="text" id="search-input" placeholder="חיפוש לפי שם מסמך, מזהה (UID), או תוכן...">
         </div>
 
+        <div class="bulk-bar" id="bulk-bar" hidden>
+            <span class="bulk-bar-count" id="bulk-bar-count"></span>
+            <button type="button" id="bulk-clear-btn" class="btn-modern">בטל בחירה</button>
+            <button type="button" id="bulk-delete-btn" class="btn-modern btn-danger-soft">🗑 מחק נבחרים</button>
+        </div>
+
         <table class="history-table">
             <thead>
                 <tr>
-                    <th width="40%">שם המסמך</th>
+                    <th class="checkbox-cell"><input type="checkbox" id="select-all-checkbox" title="בחר הכל"></th>
+                    <th width="36%">שם המסמך</th>
                     <th width="20%">מזהה ייחודי (UID)</th>
                     <th width="15%">מספר מהדורה</th>
                     <th width="25%">תאריך עדכון</th>
@@ -126,13 +156,28 @@
         })();
 
         let searchTimeout = null;
+        const selectedIds = new Set();
+
+        function updateBulkBar() {
+            const bar = document.getElementById('bulk-bar');
+            const rowBoxes = document.querySelectorAll('.row-checkbox');
+            const selectAll = document.getElementById('select-all-checkbox');
+
+            bar.hidden = selectedIds.size === 0;
+            document.getElementById('bulk-bar-count').textContent = `${selectedIds.size} מסמכים נבחרו`;
+
+            selectAll.checked = rowBoxes.length > 0 && selectedIds.size === rowBoxes.length;
+            selectAll.indeterminate = selectedIds.size > 0 && selectedIds.size < rowBoxes.length;
+        }
 
         function renderDocuments(docs) {
             const tbody = document.getElementById('history-tbody');
             tbody.innerHTML = '';
+            selectedIds.clear();
 
             if (docs.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4"><div class="no-results">לא נמצאו מסמכים תואמים.</div></td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5"><div class="no-results">לא נמצאו מסמכים תואמים.</div></td></tr>';
+                updateBulkBar();
                 return;
             }
 
@@ -149,6 +194,7 @@
                     : '---';
 
                 tr.innerHTML = `
+                    <td class="checkbox-cell"><input type="checkbox" class="row-checkbox" data-id="${doc.id}"></td>
                     <td>
                         <div class="flex-col">
                             <strong class="doc-title-strong">${docTitle}</strong>
@@ -161,8 +207,18 @@
                     <td><span class="badge badge-rev">Rev ${doc.revision_number}</span></td>
                     <td><span class="badge badge-date">${dateStr}</span></td>
                 `;
+
+                const cb = tr.querySelector('.row-checkbox');
+                cb.addEventListener('click', (e) => e.stopPropagation());
+                cb.addEventListener('change', () => {
+                    if (cb.checked) selectedIds.add(doc.id); else selectedIds.delete(doc.id);
+                    updateBulkBar();
+                });
+
                 tbody.appendChild(tr);
             });
+
+            updateBulkBar();
         }
 
         function fetchDocuments(query = '') {
@@ -177,6 +233,41 @@
             searchTimeout = setTimeout(() => {
                 fetchDocuments(e.target.value.trim());
             }, 300);
+        });
+
+        document.getElementById('select-all-checkbox').addEventListener('change', (e) => {
+            const checked = e.target.checked;
+            document.querySelectorAll('.row-checkbox').forEach(cb => {
+                cb.checked = checked;
+                const id = parseInt(cb.dataset.id, 10);
+                if (checked) selectedIds.add(id); else selectedIds.delete(id);
+            });
+            updateBulkBar();
+        });
+
+        document.getElementById('bulk-clear-btn').addEventListener('click', () => {
+            selectedIds.clear();
+            document.querySelectorAll('.row-checkbox').forEach(cb => { cb.checked = false; });
+            updateBulkBar();
+        });
+
+        document.getElementById('bulk-delete-btn').addEventListener('click', async () => {
+            const ids = Array.from(selectedIds);
+            if (ids.length === 0) return;
+            if (!confirm(`למחוק ${ids.length} מסמכים? לא ניתן לשחזר לאחר המחיקה.`)) return;
+
+            try {
+                const res = await fetch('/api/documents', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids }),
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'מחיקה נכשלה');
+                fetchDocuments(document.getElementById('search-input').value.trim());
+            } catch (err) {
+                alert('מחיקה נכשלה: ' + err.message);
+            }
         });
 
         // Initial Load

@@ -179,6 +179,18 @@ def get_document(doc_id):
         "logo_right_url": upload_url(os.path.basename(d.logo_right_path)) if d.logo_right_path else None,
     })
 
+
+@api_bp.route('/documents', methods=['DELETE'])
+def delete_documents():
+    """Bulk-delete documents: ``DELETE /documents`` with body ``{"ids": [1, 2, ...]}``."""
+    ids = (request.json or {}).get('ids') if request.is_json else None
+    if not isinstance(ids, list) or not ids or not all(isinstance(i, int) for i in ids):
+        return jsonify({"error": "ids must be a non-empty list of integers"}), 400
+    deleted = Document.query.filter(Document.id.in_(ids)).delete(synchronize_session=False)
+    db.session.commit()
+    return jsonify({"deleted": deleted}), 200
+
+
 def generate_doc_number():
     """Return the next auto document number, formatted ``IT-<seq:03d>-<DDMMYYYY>``.
 

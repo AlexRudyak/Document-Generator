@@ -211,6 +211,29 @@ def test_generate_document_creates_revision(client):
     assert 'Rev2' in second.headers['Content-Disposition']
 
 
+def test_delete_documents_removes_selected_only(client):
+    client.post('/api/documents/generate', json={"content": [{"type": "header", "text": "A"}]})
+    client.post('/api/documents/generate', json={"content": [{"type": "header", "text": "B"}]})
+    client.post('/api/documents/generate', json={"content": [{"type": "header", "text": "C"}]})
+    docs = client.get('/api/documents').get_json()
+    ids_to_delete = [d['id'] for d in docs[:2]]
+    keep_id = docs[2]['id']
+
+    res = client.delete('/api/documents', json={"ids": ids_to_delete})
+    assert res.status_code == 200
+    assert res.get_json()['deleted'] == 2
+
+    remaining = client.get('/api/documents').get_json()
+    assert [d['id'] for d in remaining] == [keep_id]
+    assert client.get(f'/api/documents/{ids_to_delete[0]}').status_code == 404
+
+
+def test_delete_documents_rejects_empty_or_missing_ids(client):
+    assert client.delete('/api/documents', json={}).status_code == 400
+    assert client.delete('/api/documents', json={"ids": []}).status_code == 400
+    assert client.delete('/api/documents', json={"ids": "1"}).status_code == 400
+
+
 def test_documents_search_filter(client):
     client.post('/api/documents/generate', json={
         "content": [{"type": "title", "text": "Findable"}, {"type": "header", "text": "x"}],
