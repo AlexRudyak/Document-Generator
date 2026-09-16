@@ -11,26 +11,26 @@
     <script>(function(){var t=localStorage.getItem('theme');if(!t)t=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';document.documentElement.setAttribute('data-theme',t);})();</script>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
-<body>
+<body class="has-fab">
     <div class="container">
         <h1>מחולל מסמכים</h1>
-        
+
         <div class="toolbar">
             <button id="save-template-btn" class="btn-secondary">שמור כתבנית</button>
             <select id="template-select">
                 <option value="">-- טען תבנית --</option>
             </select>
             <button id="open-templates-panel-btn" class="btn-secondary" title="ייצוא וייבוא תבניות">🗂 ייצוא / ייבוא תבניות</button>
-            <a href="/history" class="btn-secondary" style="text-decoration: none;">📄 היסטוריית מסמכים</a>
+            <a href="/history" class="btn-secondary btn-link">📄 היסטוריית מסמכים</a>
             <button id="theme-toggle-btn" class="btn-secondary theme-toggle" title="החלף מצב תצוגה"></button>
         </div>
 
-        <div id="document-title-container" style="margin-bottom: 20px;">
-            <label for="doc-title" style="font-weight: bold; display: block; margin-bottom: 5px;">כותרת המסמך:</label>
-            <input type="text" id="doc-title" class="block-input" style="width: 100%; box-sizing: border-box; font-size: 1.2em; font-weight: bold;" placeholder="הזן כאן כותרת למסמך...">
+        <div id="document-title-container" class="title-fields">
+            <label for="doc-title" class="field-label">כותרת המסמך:</label>
+            <input type="text" id="doc-title" class="block-input title-input" placeholder="הזן כאן כותרת למסמך...">
 
-            <label for="custom-doc-id" style="font-weight: bold; display: block; margin-top: 15px; margin-bottom: 5px;">מזהה מסמך (אופציונלי):</label>
-            <input type="text" id="custom-doc-id" class="block-input" style="width: 100%; box-sizing: border-box;" placeholder="השאר ריק למזהה אוטומטי (IT-XXX-תאריך)...">
+            <label for="custom-doc-id" class="field-label field-label--spaced">מזהה מסמך (אופציונלי):</label>
+            <input type="text" id="custom-doc-id" class="block-input" placeholder="השאר ריק למזהה אוטומטי (IT-XXX-תאריך)...">
         </div>
 
         <div id="revision-alert" class="revision-alert">
@@ -45,7 +45,7 @@
             <!-- Blocks will be added here dynamically -->
         </div>
 
-        <div class="toolbar" style="margin-bottom: 20px;">
+        <div class="actions">
             <button id="add-header-btn" class="btn-primary">+ הוסף כותרת</button>
             <button id="add-paragraph-btn" class="btn-primary">+ הוסף פסקה</button>
             <button id="add-table-btn" class="btn-primary">+ הוסף טבלה</button>
