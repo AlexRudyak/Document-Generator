@@ -100,6 +100,12 @@ const OPTIONAL_SETTINGS = [
     { key: 'logo_right',     toggle: 'logo-right-toggle', control: 'logo-right-control', hidden: 'logo-right-path',  status: 'logo-right-status', thumb: 'logo-right-thumb' },
     { key: 'logo_left',      toggle: 'logo-left-toggle',  control: 'logo-left-control',  hidden: 'logo-left-path',   status: 'logo-left-status',  thumb: 'logo-left-thumb'  },
     { key: 'contact',        toggle: 'contact-toggle',    control: 'contact-control',    rows: 'contact-rows' },
+    // Plain on/off toggles with no revealed control and no value to carry
+    // or clear — just include_toc/include_tof in the generate payload.
+    // Default on (unlike the rest) to match the pre-toggle behavior: a TOC
+    // / TOF was always included whenever the document had headings/images.
+    { key: 'toc', toggle: 'toc-toggle', boolOnly: true, defaultOn: true },
+    { key: 'tof', toggle: 'tof-toggle', boolOnly: true, defaultOn: true },
 ];
 
 // Paint (or clear) the mini page-preview corner for a logo setting.
@@ -119,7 +125,7 @@ function syncSetting(s, hardReset = false) {
     const cb = document.getElementById(s.toggle);
     const on = cb.checked;
     cb.closest('.setting').classList.toggle('is-on', on);
-    document.getElementById(s.control).hidden = !on;
+    if (s.control) document.getElementById(s.control).hidden = !on;
     if (!on && s.hidden && (hardReset || !s.persistOnOff)) {
         document.getElementById(s.hidden).value = '';
         const st = document.getElementById(s.status);
@@ -145,7 +151,7 @@ function syncSetting(s, hardReset = false) {
 function applySetting(key, value, previewUrl, caption) {
     const s = OPTIONAL_SETTINGS.find(x => x.key === key);
     document.getElementById(s.toggle).checked = !!value;
-    if (value) {
+    if (value && !s.boolOnly) {
         if (s.key === 'classification') {
             document.getElementById('doc-classification').value = value;
         } else if (s.text) {
@@ -205,7 +211,7 @@ function getContactDetails() {
 
 function resetOptionalSettings() {
     OPTIONAL_SETTINGS.forEach(s => {
-        document.getElementById(s.toggle).checked = false;
+        document.getElementById(s.toggle).checked = !!s.defaultOn;
         syncSetting(s, /* hardReset */ true);
     });
 }
@@ -752,6 +758,8 @@ function loadDocument(id) {
             applySetting('logo_right', d.logo_right_path, d.logo_right_url);
             applySetting('logo_left', d.logo_left_path, d.logo_left_url);
             applySetting('contact', d.contact_details);
+            applySetting('toc', d.include_toc);
+            applySetting('tof', d.include_tof);
             document.getElementById('blocks-container').innerHTML = '';
             document.getElementById('doc-title').value = '';
             document.getElementById('custom-doc-id').value = d.document_number;
@@ -925,6 +933,8 @@ function generateDocument() {
         logo_right_path: document.getElementById('logo-right-path').value || null,
         logo_left_path: document.getElementById('logo-left-path').value || null,
         contact_details: document.getElementById('contact-toggle').checked ? getContactDetails() : null,
+        include_toc: document.getElementById('toc-toggle').checked,
+        include_tof: document.getElementById('tof-toggle').checked,
     };
     if (currentParentDocId) {
         // A revision always inherits the parent's document number server-side

@@ -65,6 +65,12 @@ def _apply_lightweight_migrations():
             'contact_details': 'TEXT',
             'watermark': 'VARCHAR(60)',
             'signature_text': 'VARCHAR(120)',
+            # DEFAULT 1 backfills existing rows too (SQLite applies a
+            # column's DEFAULT to pre-existing rows on ADD COLUMN), so
+            # documents created before this toggle existed keep rendering
+            # their TOC/TOF exactly as before.
+            'include_toc': 'BOOLEAN DEFAULT 1',
+            'include_tof': 'BOOLEAN DEFAULT 1',
         },
     }
     inspector = inspect(db.engine)

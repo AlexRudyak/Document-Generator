@@ -43,6 +43,13 @@ class Document(db.Model):
     contact_details = db.Column(db.Text, nullable=True)
     # Optional diagonal watermark text drawn on every page (e.g. "טיוטה").
     watermark = db.Column(db.String(60), nullable=True)
+    # Whether the auto-generated table of contents / table of figures is
+    # included when the document has headings / images to put in one.
+    # Nullable (like the other lightweight-migration columns below) but
+    # effectively always true/false - the migration backfills existing rows
+    # to 1 so older documents keep rendering exactly as before.
+    include_toc = db.Column(db.Boolean, default=True, nullable=True)
+    include_tof = db.Column(db.Boolean, default=True, nullable=True)
     content = db.Column(db.Text, nullable=False)  # JSON array of block dicts
     created_date = db.Column(db.DateTime, default=_utcnow)
 

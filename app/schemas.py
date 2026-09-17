@@ -63,6 +63,10 @@ class DocumentSchema(Schema):
                                   allow_none=True, load_default=None)
     watermark = fields.String(required=False, allow_none=True, load_default=None,
                               validate=_reject_html)
+    # Whether the auto table of contents / table of figures is included when
+    # the document has headings / images to put one together from.
+    include_toc = fields.Boolean(required=False, load_default=True)
+    include_tof = fields.Boolean(required=False, load_default=True)
     # A short prefix plugged into the auto-generated document number (see
     # routes.generate_doc_number), e.g. "BB" -> "BB-001-15092026" - not the
     # full number itself, so it's restricted to plain word characters.

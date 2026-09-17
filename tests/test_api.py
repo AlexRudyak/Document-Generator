@@ -165,6 +165,26 @@ def test_watermark_omitted_is_null(client):
     assert client.get(f'/api/documents/{doc_id}').get_json()['watermark'] is None
 
 
+def test_include_toc_tof_default_true(client):
+    client.post('/api/documents/generate', json={"content": [{"type": "header", "text": "H"}]})
+    doc_id = client.get('/api/documents').get_json()[0]['id']
+    doc = client.get(f'/api/documents/{doc_id}').get_json()
+    assert doc['include_toc'] is True
+    assert doc['include_tof'] is True
+
+
+def test_include_toc_tof_can_be_disabled(client):
+    client.post('/api/documents/generate', json={
+        "content": [{"type": "header", "text": "H"}],
+        "include_toc": False,
+        "include_tof": False,
+    })
+    doc_id = client.get('/api/documents').get_json()[0]['id']
+    doc = client.get(f'/api/documents/{doc_id}').get_json()
+    assert doc['include_toc'] is False
+    assert doc['include_tof'] is False
+
+
 def test_watermark_rejects_html(client):
     res = client.post('/api/documents/generate', json={
         "content": [{"type": "header", "text": "H"}], "watermark": "<script>x</script>",

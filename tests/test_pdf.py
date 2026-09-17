@@ -38,6 +38,62 @@ def test_large_image_is_downscaled_not_embedded_raw(tmp_path):
     assert len(pdf) < 700_000
 
 
+def test_include_toc_false_still_renders(tmp_path):
+    # Should never crash regardless of whether pymupdf is installed to
+    # actually inspect the output.
+    pdf_bytes = generate_pdf("IT-1", [
+        {"type": "header", "text": "Chapter 1"},
+        {"type": "paragraph", "text": "Content"},
+    ], include_toc=False)
+    assert pdf_bytes.startswith(b'%PDF-')
+
+
+def test_include_toc_false_removes_toc_page_and_links():
+    fitz = pytest.importorskip("fitz")  # pymupdf; skipped if not installed
+
+    blocks = [{"type": "title", "text": "T"}]
+    for i in range(3):
+        blocks.append({"type": "header", "text": f"Chapter {i + 1}", "level": 0})
+        blocks.append({"type": "paragraph", "text": "body"})
+
+    with_toc = fitz.open(stream=generate_pdf("IT-1", blocks), filetype="pdf")
+    without_toc = fitz.open(stream=generate_pdf("IT-1", blocks, include_toc=False), filetype="pdf")
+
+    def goto_link_count(doc):
+        return sum(len([l for l in page.get_links() if l.get("kind") == fitz.LINK_GOTO])
+                   for page in doc)
+
+    assert goto_link_count(with_toc) > 0
+    assert goto_link_count(without_toc) == 0
+    # No TOC page to insert -> one fewer page than the same content with it.
+    assert len(without_toc) == len(with_toc) - 1
+
+
+def test_include_tof_false_removes_tof_section(tmp_path):
+    fitz = pytest.importorskip("fitz")  # pymupdf; skipped if not installed
+
+    img = tmp_path / "pic.png"
+    Image.new("RGB", (100, 100), "red").save(img)
+    # A header (for a TOC entry, unaffected by include_tof) plus an image
+    # (for a TOF entry) so the two link kinds can be told apart by count.
+    blocks = [
+        {"type": "header", "text": "H"},
+        {"type": "image", "text": str(img), "image_name": "x"},
+    ]
+
+    def goto_link_count(doc):
+        return sum(len([l for l in page.get_links() if l.get("kind") == fitz.LINK_GOTO])
+                   for page in doc)
+
+    with_tof = fitz.open(stream=generate_pdf("IT-1", blocks), filetype="pdf")
+    without_tof = fitz.open(stream=generate_pdf("IT-1", blocks, include_tof=False), filetype="pdf")
+
+    # Losing exactly the image's TOF entry - the header's TOC entry (from
+    # include_toc, untouched here) still links normally.
+    assert goto_link_count(without_tof) == goto_link_count(with_tof) - 1
+    assert goto_link_count(without_tof) > 0
+
+
 def test_toc_links_point_to_their_headings_not_page_one():
     fitz = pytest.importorskip("fitz")  # pymupdf; skipped if not installed
 

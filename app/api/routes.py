@@ -180,6 +180,8 @@ def get_document(doc_id):
         "logo_right_path": d.logo_right_path,
         "contact_details": json.loads(d.contact_details) if d.contact_details else None,
         "watermark": d.watermark,
+        "include_toc": d.include_toc if d.include_toc is not None else True,
+        "include_tof": d.include_tof if d.include_tof is not None else True,
         # Browser URLs for editor previews (None if not web-served).
         "signature_url": upload_url(os.path.basename(d.signature_path)) if d.signature_path else None,
         "logo_left_url": upload_url(os.path.basename(d.logo_left_path)) if d.logo_left_path else None,
@@ -206,6 +208,8 @@ def download_document_pdf(doc_id):
         logo_right_path=d.logo_right_path,
         contact_details=json.loads(d.contact_details) if d.contact_details else None,
         watermark=d.watermark,
+        include_toc=d.include_toc if d.include_toc is not None else True,
+        include_tof=d.include_tof if d.include_tof is not None else True,
     )
     suffix = '' if keep_highlight else '_clean'
     return send_file(
@@ -278,6 +282,8 @@ def generate_document():
     contact_details = [r for r in (data.get('contact_details') or [])
                        if (r.get('label') or '').strip() or (r.get('value') or '').strip()] or None
     watermark = (data.get('watermark') or '').strip()[:60] or None
+    include_toc = data.get('include_toc', True)
+    include_tof = data.get('include_tof', True)
     # A custom ID is a *prefix* (DocumentSchema/_DOC_ID_PREFIX_RE caps it at
     # 12 word characters) — the rest of the number is still auto-generated,
     # e.g. "BB" -> "BB-001-15092026". Leaving it blank uses the default
@@ -312,6 +318,8 @@ def generate_document():
         logo_right_path=logo_right_path,
         contact_details=json.dumps(contact_details, ensure_ascii=False) if contact_details else None,
         watermark=watermark,
+        include_toc=include_toc,
+        include_tof=include_tof,
         content=json.dumps(content_list, ensure_ascii=False)
     )
     db.session.add(doc)
@@ -319,7 +327,8 @@ def generate_document():
 
     pdf_bytes = generate_pdf(doc_num, content_list, classification, unique_identifier, revision_number,
                              signature_path, signature_text=signature_text, logo_left_path=logo_left_path,
-                             logo_right_path=logo_right_path, contact_details=contact_details, watermark=watermark)
+                             logo_right_path=logo_right_path, contact_details=contact_details, watermark=watermark,
+                             include_toc=include_toc, include_tof=include_tof)
     
     return send_file(
         io.BytesIO(pdf_bytes),

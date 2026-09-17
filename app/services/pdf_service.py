@@ -590,7 +590,7 @@ def _draw_watermark(canv, text, font_name):
 
 def generate_pdf(document_number, content_blocks, classification=None, unique_identifier='', revision_number=1,
                  signature_path=None, signature_text=None, logo_left_path=None, logo_right_path=None,
-                 contact_details=None, watermark=None):
+                 contact_details=None, watermark=None, include_toc=True, include_tof=True):
     """Render ``content_blocks`` to PDF bytes.
 
     Parameters mirror the persisted ``Document`` row. ``content_blocks`` is the
@@ -598,6 +598,8 @@ def generate_pdf(document_number, content_blocks, classification=None, unique_id
     ``_highlight`` key (added by :func:`app.services.diff_service.calculate_diff`)
     are rendered with a yellow background to flag revision changes. A falsy
     ``classification`` omits the per-page classification bands entirely.
+    ``include_toc`` / ``include_tof`` gate the table of contents / table of
+    figures even when the document has headings / images to build one from.
     """
     font_name = _resolve_font()
     font_bold = FONT_BOLD
@@ -626,9 +628,9 @@ def generate_pdf(document_number, content_blocks, classification=None, unique_id
                        spaceAfter=14, hAlign='RIGHT'),
         ]
 
-    has_headers = any(b.get("type") == "header" for b in content_blocks)
+    has_headers = any(b.get("type") == "header" for b in content_blocks) and include_toc
     has_figures = any(b.get("type") == "image" and b.get("text") and os.path.exists(b["text"])
-                      for b in content_blocks)
+                      for b in content_blocks) and include_tof
 
     story = []
 
