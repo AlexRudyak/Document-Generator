@@ -925,11 +925,16 @@ function generateDocument() {
         logo_right_path: document.getElementById('logo-right-path').value || null,
         logo_left_path: document.getElementById('logo-left-path').value || null,
         contact_details: document.getElementById('contact-toggle').checked ? getContactDetails() : null,
-        custom_doc_id: document.getElementById('custom-doc-id').value.trim()
     };
     if (currentParentDocId) {
+        // A revision always inherits the parent's document number server-side
+        // (see generate_document), and the field shown here is disabled and
+        // holds that full number, not a prefix - sending it back would fail
+        // the custom_doc_id prefix validation for no reason.
         payload.parent_document_id = currentParentDocId;
         payload.highlight_changes = document.getElementById('highlight-changes-toggle').checked;
+    } else {
+        payload.custom_doc_id = document.getElementById('custom-doc-id').value.trim();
     }
     
     fetch('/api/documents/generate', {

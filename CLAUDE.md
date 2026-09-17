@@ -104,8 +104,16 @@ There is no build step for the front-end (vanilla JS/CSS served from
   columns added later go in `_apply_lightweight_migrations()` in
   `app/__init__.py` (idempotent `ALTER TABLE ADD COLUMN` for nullable columns).
   Add new post-v1 columns there too.
-- **Document numbers** come from the single-row `DocCounter` table via an atomic
-  `UPDATE ... SET counter = counter + 1`. Format: `IT-<seq:03d>-<DDMMYYYY>`.
+- **Document numbers** are `<prefix>-<seq:03d>-<DDMMYYYY>`, prefix defaulting to
+  `IT`. The sequence is per (prefix, date) in the `DocSequence` table (atomic
+  `UPDATE ... SET counter = counter + 1`), so it resets to 001 every day and
+  for every distinct prefix instead of growing forever. `DocumentSchema.
+  custom_doc_id` lets the editor override just the *prefix* (validated by
+  `_DOC_ID_PREFIX_RE`: word characters only, max 12) - not the whole number -
+  e.g. entering `BB` produces `BB-001-15092026`. A revision always inherits
+  the parent's full document number regardless of what's in that field
+  (which the editor disables and just displays for a loaded revision); the
+  frontend accordingly omits `custom_doc_id` entirely when generating one.
 - **Two-pass PDF build.** `MyDocTemplate.multiBuild` runs layout twice so the TOC
   can resolve page numbers. `NumberedCanvas` buffers page state and stamps
   headers/footers/`page X of N` only in `save()`, when the total is known. Do not

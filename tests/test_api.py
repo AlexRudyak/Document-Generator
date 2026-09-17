@@ -1,5 +1,6 @@
 import io
 import json
+from datetime import datetime
 
 
 def test_create_template(client):
@@ -209,10 +210,69 @@ def test_custom_doc_id_rejects_html(client):
     assert res.status_code == 400
 
 
+def test_custom_doc_id_rejects_full_id_with_hyphens(client):
+    # custom_doc_id is a prefix plugged into "<prefix>-<seq>-<date>", not a
+    # full document number - punctuation like a hyphen no longer parses.
+    res = client.post('/api/documents/generate', json={
+        "content": [{"type": "header", "text": "H"}],
+        "custom_doc_id": "DOC-1",
+    })
+    assert res.status_code == 400
+
+
+def test_custom_doc_id_used_as_prefix(client):
+    res = client.post('/api/documents/generate', json={
+        "content": [{"type": "header", "text": "H"}],
+        "custom_doc_id": "BB",
+    })
+    assert res.status_code == 200
+    doc_id = client.get('/api/documents').get_json()[0]['id']
+    doc = client.get(f'/api/documents/{doc_id}').get_json()
+    today = datetime.now().strftime("%d%m%Y")
+    assert doc['document_number'] == f"BB-001-{today}"
+
+
+def test_custom_doc_id_sequence_increments_per_prefix_and_resets_for_others(client):
+    first = client.post('/api/documents/generate', json={
+        "content": [{"type": "header", "text": "H"}], "custom_doc_id": "CC",
+    })
+    second = client.post('/api/documents/generate', json={
+        "content": [{"type": "header", "text": "H"}], "custom_doc_id": "CC",
+    })
+    other_prefix = client.post('/api/documents/generate', json={
+        "content": [{"type": "header", "text": "H"}], "custom_doc_id": "DD",
+    })
+    assert first.status_code == second.status_code == other_prefix.status_code == 200
+
+    docs = {d['document_number']: d for d in client.get('/api/documents').get_json()}
+    today = datetime.now().strftime("%d%m%Y")
+    assert f"CC-001-{today}" in docs
+    assert f"CC-002-{today}" in docs
+    # A different prefix gets its own sequence, starting back at 001.
+    assert f"DD-001-{today}" in docs
+
+
+def test_custom_doc_id_rejects_overlong_prefix(client):
+    res = client.post('/api/documents/generate', json={
+        "content": [{"type": "header", "text": "H"}],
+        "custom_doc_id": "A" * 13,
+    })
+    assert res.status_code == 400
+
+
+def test_default_doc_number_uses_it_prefix(client):
+    res = client.post('/api/documents/generate', json={"content": [{"type": "header", "text": "H"}]})
+    assert res.status_code == 200
+    doc_id = client.get('/api/documents').get_json()[0]['id']
+    doc = client.get(f'/api/documents/{doc_id}').get_json()
+    today = datetime.now().strftime("%d%m%Y")
+    assert doc['document_number'] == f"IT-001-{today}"
+
+
 def test_generate_document_creates_revision(client):
     first = client.post('/api/documents/generate', json={
         "content": [{"type": "header", "text": "V1"}],
-        "custom_doc_id": "DOC-1",
+        "custom_doc_id": "BB",
     })
     assert first.status_code == 200
 

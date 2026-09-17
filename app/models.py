@@ -4,7 +4,8 @@
 ``Document`` – a generated document plus its revision metadata. Documents that
 share a ``unique_identifier`` are revisions of the same logical document,
 distinguished by ``revision_number``.
-``DocCounter`` – single-row table backing the auto document-number sequence.
+``DocSequence`` – per (prefix, date) counter backing auto document numbers,
+so the sequence resets each day instead of growing forever.
 """
 
 from datetime import datetime, timezone
@@ -46,6 +47,17 @@ class Document(db.Model):
     created_date = db.Column(db.DateTime, default=_utcnow)
 
 
-class DocCounter(db.Model):
+class DocSequence(db.Model):
+    """Next-sequence counter for one (prefix, date) pair, e.g. ("IT", "15092026").
+
+    ``document_number`` is built as ``<prefix>-<counter:03d>-<date_str>``; a
+    fresh row (counter 0) is created the first time a prefix is used on a
+    given day, so the sequence naturally restarts every day per prefix
+    instead of climbing forever.
+    """
     id = db.Column(db.Integer, primary_key=True)
-    counter = db.Column(db.Integer, default=0)
+    prefix = db.Column(db.String(12), nullable=False)
+    date_str = db.Column(db.String(8), nullable=False)  # DDMMYYYY
+    counter = db.Column(db.Integer, default=0, nullable=False)
+
+    __table_args__ = (db.UniqueConstraint('prefix', 'date_str', name='uq_doc_sequence_prefix_date'),)

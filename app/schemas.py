@@ -5,6 +5,8 @@ template content and document content, and is what gets serialized into
 ``Template.content`` / ``Document.content``.
 """
 
+import re
+
 from marshmallow import Schema, fields, validate, ValidationError
 
 
@@ -12,6 +14,20 @@ def _reject_html(value):
     """No angle brackets in user text (defence in depth; PDF also html.escapes)."""
     if value and ("<" in value or ">" in value):
         raise ValidationError("Invalid characters detected. HTML tags (<, >) are not allowed.")
+
+
+# custom_doc_id is a short *prefix* plugged into "<prefix>-<seq>-<date>"
+# (see routes.generate_doc_number), so it's restricted to plain word
+# characters - no spaces, hyphens or punctuation that would make the
+# resulting document number ambiguous to parse back apart.
+_DOC_ID_PREFIX_RE = re.compile(r'^\w{0,12}$', re.UNICODE)
+
+
+def _validate_doc_id_prefix(value):
+    if not _DOC_ID_PREFIX_RE.match(value or ''):
+        raise ValidationError(
+            "Document ID must be up to 12 letters/digits, no spaces or symbols."
+        )
 
 
 class ContactRowSchema(Schema):
@@ -47,10 +63,10 @@ class DocumentSchema(Schema):
                                   allow_none=True, load_default=None)
     watermark = fields.String(required=False, allow_none=True, load_default=None,
                               validate=_reject_html)
-    # Stored verbatim as Document.document_number and rendered client-side in
-    # the history table, so it needs the same HTML guard as every other
-    # user-text field, not just the block content.
-    custom_doc_id = fields.String(required=False, allow_none=True, validate=_reject_html)
+    # A short prefix plugged into the auto-generated document number (see
+    # routes.generate_doc_number), e.g. "BB" -> "BB-001-15092026" - not the
+    # full number itself, so it's restricted to plain word characters.
+    custom_doc_id = fields.String(required=False, allow_none=True, validate=_validate_doc_id_prefix)
     # Whether a revision's changed blocks get a yellow diff highlight against
     # the parent; irrelevant (ignored) when there's no parent_document_id.
     highlight_changes = fields.Boolean(required=False, allow_none=True, load_default=True)

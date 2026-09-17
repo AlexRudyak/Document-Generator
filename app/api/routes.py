@@ -23,8 +23,9 @@ from datetime import datetime
 from flask import Blueprint, request, jsonify, send_file, current_app
 from werkzeug.utils import secure_filename
 from marshmallow import ValidationError
+from sqlalchemy.exc import IntegrityError
 from app import db
-from app.models import Template, Document, DocCounter
+from app.models import Template, Document, DocSequence
 from app.schemas import TemplateSchema, DocumentSchema
 from app.services.pdf_service import generate_pdf
 from app.services.diff_service import calculate_diff
@@ -226,24 +227,37 @@ def delete_documents():
     return jsonify({"deleted": deleted}), 200
 
 
-def generate_doc_number():
-    """Return the next auto document number, formatted ``IT-<seq:03d>-<DDMMYYYY>``.
+#: Prefix used when the user leaves the document-id field empty.
+DEFAULT_DOC_ID_PREFIX = "IT"
 
-    The sequence lives in the single-row ``DocCounter`` table and is incremented
-    with an atomic UPDATE to keep concurrent requests from colliding.
+
+def generate_doc_number(prefix=DEFAULT_DOC_ID_PREFIX):
+    """Return the next document number for ``prefix``, formatted
+    ``<prefix>-<seq:03d>-<DDMMYYYY>``.
+
+    The sequence is per (prefix, date) in the ``DocSequence`` table, so it
+    resets to 001 every day and for every distinct prefix, rather than
+    growing forever. Incremented with an atomic UPDATE to keep concurrent
+    requests from colliding; row creation is retried once on a unique-
+    constraint race (two requests both using a brand-new prefix/date).
     """
-    counter = DocCounter.query.first()
-    if not counter:
-        counter = DocCounter(counter=0)
-        db.session.add(counter)
-        db.session.commit()
-        
-    DocCounter.query.filter_by(id=counter.id).update({'counter': DocCounter.counter + 1})
-    db.session.commit()
-    db.session.refresh(counter)
-    
     date_str = datetime.now().strftime("%d%m%Y")
-    return f"IT-{counter.counter:03d}-{date_str}"
+
+    seq = DocSequence.query.filter_by(prefix=prefix, date_str=date_str).first()
+    if not seq:
+        seq = DocSequence(prefix=prefix, date_str=date_str, counter=0)
+        db.session.add(seq)
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            seq = DocSequence.query.filter_by(prefix=prefix, date_str=date_str).first()
+
+    DocSequence.query.filter_by(id=seq.id).update({'counter': DocSequence.counter + 1})
+    db.session.commit()
+    db.session.refresh(seq)
+
+    return f"{prefix}-{seq.counter:03d}-{date_str}"
 
 @api_bp.route('/documents/generate', methods=['POST'])
 def generate_document():
@@ -264,12 +278,14 @@ def generate_document():
     contact_details = [r for r in (data.get('contact_details') or [])
                        if (r.get('label') or '').strip() or (r.get('value') or '').strip()] or None
     watermark = (data.get('watermark') or '').strip()[:60] or None
-    # Trim to the unique_identifier column width (VARCHAR(36)) to avoid silent
-    # truncation / driver errors on very long custom IDs.
-    custom_doc_id = (data.get('custom_doc_id') or '').strip()[:36] or None
+    # A custom ID is a *prefix* (DocumentSchema/_DOC_ID_PREFIX_RE caps it at
+    # 12 word characters) — the rest of the number is still auto-generated,
+    # e.g. "BB" -> "BB-001-15092026". Leaving it blank uses the default
+    # "IT" prefix.
+    custom_prefix = (data.get('custom_doc_id') or '').strip() or None
 
     revision_number = 1
-    doc_num = custom_doc_id if custom_doc_id else generate_doc_number()
+    doc_num = generate_doc_number(custom_prefix or DEFAULT_DOC_ID_PREFIX)
     unique_identifier = doc_num
 
     if parent_id:
