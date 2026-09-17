@@ -480,12 +480,12 @@ textarea.block-input {
 }
 
 #generate-btn {
-    background: linear-gradient(135deg, var(--success), var(--success-strong));
+    background: var(--accent-gradient);
     font-size: 15px;
     font-weight: 700;
     padding: 14px 30px;
     border-radius: 14px;
-    box-shadow: 0 10px 26px var(--success-shadow), 0 2px 8px var(--shadow-lg);
+    box-shadow: 0 10px 26px var(--accent-shadow), 0 2px 8px var(--shadow-lg);
     border: none;
     color: var(--on-accent);
     cursor: pointer;
@@ -504,7 +504,7 @@ textarea.block-input {
 
 #generate-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 14px 32px var(--success-shadow-hover), 0 2px 8px var(--shadow-lg);
+    box-shadow: 0 14px 32px var(--accent-shadow-strong), 0 2px 8px var(--shadow-lg);
 }
 
 #generate-btn:active {
