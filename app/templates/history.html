@@ -119,7 +119,7 @@
         <div class="header-row">
             <h1>היסטוריית מסמכים</h1>
             <div class="header-row-actions">
-                <button id="theme-toggle-btn" class="btn-modern" title="החלף מצב תצוגה"></button>
+                <button id="theme-toggle-btn" class="btn-modern theme-toggle" title="החלף מצב תצוגה"></button>
                 <a href="/" class="btn-modern">&rarr; חזרה לעורך</a>
             </div>
         </div>
@@ -161,7 +161,8 @@
             const btn = document.getElementById('theme-toggle-btn');
             const sync = () => {
                 const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-                btn.innerText = isDark ? '☀️ מצב בהיר' : '🌙 מצב כהה';
+                btn.innerText = isDark ? '☀️' : '🌙';
+                btn.title = isDark ? 'עבור למצב בהיר' : 'עבור למצב כהה';
             };
             sync();
             btn.addEventListener('click', () => {

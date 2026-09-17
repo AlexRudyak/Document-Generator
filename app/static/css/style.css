@@ -213,9 +213,16 @@ button, .btn-primary, .btn-secondary, .btn-modern, .btn-primary-modern {
 }
 
 .theme-toggle {
-    font-size: 17px;
+    width: 44px;
+    height: 44px;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
     line-height: 1;
-    padding: 10px 14px !important;
+    flex: none;
 }
 
 .btn-link {

@@ -73,7 +73,8 @@ function initThemeToggle() {
     if (!btn) return;
     const sync = () => {
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        btn.innerText = isDark ? '☀️ מצב בהיר' : '🌙 מצב כהה';
+        btn.innerText = isDark ? '☀️' : '🌙';
+        btn.title = isDark ? 'עבור למצב בהיר' : 'עבור למצב כהה';
     };
     sync();
     btn.addEventListener('click', () => {
