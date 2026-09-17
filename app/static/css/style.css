@@ -34,7 +34,6 @@
     --success-strong: #059669;
     --success-shadow: rgba(16, 185, 129, 0.4);
     --success-shadow-hover: rgba(16, 185, 129, 0.5);
-    --success-pulse: rgba(16, 185, 129, 0.6);
 
     --danger: #ef4444;
     --danger-soft: #fee2e2;
@@ -88,7 +87,6 @@
     --success-strong: #6ee7b7;
     --success-shadow: rgba(52, 211, 153, 0.3);
     --success-shadow-hover: rgba(52, 211, 153, 0.4);
-    --success-pulse: rgba(52, 211, 153, 0.45);
 
     --danger: #f87171;
     --danger-soft: #4c1d1d;
@@ -483,48 +481,40 @@ textarea.block-input {
 
 #generate-btn {
     background: linear-gradient(135deg, var(--success), var(--success-strong));
-    font-size: 1.2em;
-    font-weight: 800;
-    padding: 15px 40px;
-    border-radius: 50px;
-    box-shadow: 0 10px 30px var(--success-shadow), 0 2px 8px var(--shadow-lg);
+    font-size: 15px;
+    font-weight: 700;
+    padding: 14px 30px;
+    border-radius: 14px;
+    box-shadow: 0 10px 26px var(--success-shadow), 0 2px 8px var(--shadow-lg);
     border: none;
     color: var(--on-accent);
     cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    animation: pulse-green 2.5s infinite;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    letter-spacing: 0.5px;
     max-width: 100%;
     white-space: nowrap;
 }
 
 #generate-btn svg {
-    margin-left: 12px;
+    margin-left: 10px;
     flex: none;
 }
 
 #generate-btn:hover {
-    transform: scale(1.03) translateY(-2px);
-    box-shadow: 0 14px 36px var(--success-shadow-hover), 0 2px 8px var(--shadow-lg);
+    transform: translateY(-2px);
+    box-shadow: 0 14px 32px var(--success-shadow-hover), 0 2px 8px var(--shadow-lg);
 }
 
 #generate-btn:active {
-    transform: scale(1.01) translateY(0);
-}
-
-@keyframes pulse-green {
-    0% { box-shadow: 0 10px 30px var(--success-shadow), 0 0 0 0 var(--success-pulse); }
-    70% { box-shadow: 0 10px 30px var(--success-shadow), 0 0 0 14px rgba(16, 185, 129, 0); }
-    100% { box-shadow: 0 10px 30px var(--success-shadow), 0 0 0 0 rgba(16, 185, 129, 0); }
+    transform: translateY(0);
 }
 
 @media (max-width: 480px) {
     #generate-btn {
-        font-size: 1em;
-        padding: 13px 26px;
+        font-size: 14px;
+        padding: 12px 22px;
     }
 }
 
