@@ -4,13 +4,24 @@ Notable changes to this project. Earlier releases (v0.2.6 and before) are
 documented on the [GitHub Releases](https://github.com/AlexRudyak/Document-Generator/releases)
 page.
 
-## [Unreleased]
+## [0.4.0] - 2026-10-06
 
 ### Added
 
 - **App icon.** A new indigo document-with-sparkle icon: browser favicon on both
   pages and the embedded icon of the Windows `.exe`. Regenerate it with
   `python tools/make_icon.py`.
+
+### Fixed
+
+- **Stored XSS.** Closed a gap where `custom_doc_id` and template names were not
+  rejected for `<` / `>`; also includes a QA/DRY audit cleanup.
+- **Dev server shutdown.** Closing the console window now also kills the
+  reloader's child process, so it no longer lingers holding the port.
+
+### Changed
+
+- **License.** Switched from MIT to PolyForm Noncommercial 1.0.0.
 
 ## [0.3.0]
 
