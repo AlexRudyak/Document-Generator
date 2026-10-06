@@ -22,3 +22,11 @@ def test_data_dir_override(tmp_path, monkeypatch):
     monkeypatch.setenv('DOCGEN_DATA_DIR', str(tmp_path / 'data'))
     assert paths.data_dir() == str(tmp_path / 'data')
     assert os.path.isdir(paths.data_dir())
+
+
+def test_app_icons_are_served_and_referenced(client):
+    """The favicon/icon assets exist and both pages link to them."""
+    for url in ('/static/assets/icon.png', '/static/assets/favicon.ico'):
+        assert client.get(url).status_code == 200
+    for page in ('/', '/history'):
+        assert b'/static/assets/favicon.ico' in client.get(page).data

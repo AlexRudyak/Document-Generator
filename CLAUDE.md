@@ -145,6 +145,10 @@ There is no build step for the front-end (vanilla JS/CSS served from
   Linux / macOS) → the bundled `app/static/assets/fonts/DejaVuSans*.ttf` (ships
   so the .exe renders Hebrew anywhere) → Helvetica (no Hebrew). Cached in module
   globals `FONT_REGULAR` / `FONT_BOLD`. Never hardcode a single OS path.
+- **App icon.** Drawn procedurally by `tools/make_icon.py` (Pillow) — edit the
+  script and re-run it rather than hand-editing the binaries. Outputs:
+  `app/static/assets/icon.png` + `favicon.ico` (linked from both templates) and
+  `assets/icon.ico` (embedded in the .exe via `DocGenerator.spec`).
 - **PDF theme.** `pdf_service` has a palette block near the top (INK, MUTED,
   ACCENT, …). Keep colours referenced by name, not inline hex, so the look stays
   consistent. Headings: level 0 = filled dark band, level 1 = filled indigo-50

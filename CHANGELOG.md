@@ -4,6 +4,14 @@ Notable changes to this project. Earlier releases (v0.2.6 and before) are
 documented on the [GitHub Releases](https://github.com/AlexRudyak/Document-Generator/releases)
 page.
 
+## [Unreleased]
+
+### Added
+
+- **App icon.** A new indigo document-with-sparkle icon: browser favicon on both
+  pages and the embedded icon of the Windows `.exe`. Regenerate it with
+  `python tools/make_icon.py`.
+
 ## [0.3.0]
 
 ### Added
