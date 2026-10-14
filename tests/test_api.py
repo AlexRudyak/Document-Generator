@@ -227,6 +227,19 @@ def test_generate_document_creates_revision(client):
     assert 'Rev2' in second.headers['Content-Disposition']
 
 
+def test_revising_an_old_revision_does_not_collide(client):
+    client.post('/api/documents/generate', json={"content": [{"type": "header", "text": "V1"}]})
+    rev1_id = client.get('/api/documents').get_json()[0]['id']
+    for text in ("V2", "V3 from rev1"):
+        res = client.post('/api/documents/generate', json={
+            "content": [{"type": "header", "text": text}], "parent_document_id": rev1_id,
+        })
+        assert res.status_code == 200
+    revs = sorted(d['revision_number'] for d in client.get('/api/documents').get_json())
+    assert revs == [1, 2, 3]
+    assert 'Rev3' in res.headers['Content-Disposition']
+
+
 def test_documents_list_flags_highlighted_revisions(client):
     client.post('/api/documents/generate', json={"content": [{"type": "header", "text": "V1"}]})
     parent_id = client.get('/api/documents').get_json()[0]['id']

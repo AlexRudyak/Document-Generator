@@ -51,7 +51,10 @@ There is no build step for the front-end (vanilla JS/CSS served from
   of rows.
 - **Revisions, not edits.** Regenerating from `parent_document_id` inserts a new
   `Document` row sharing the parent's `unique_identifier`, with
-  `revision_number + 1`. `diff_service.calculate_diff` adds `_highlight: true` to
+  `revision_number + 1` — where "+ 1" is taken from the *newest* revision of that
+  lineage (not the parent), so re-editing an old revision from history yields the
+  next free number instead of a duplicate, and the diff is against that newest
+  revision. `diff_service.calculate_diff` adds `_highlight: true` to
   changed blocks; `pdf_service` renders those with a yellow background. The diff
   is deliberately positional/simple. Highlighting is opt-out per generation: the
   revision banner's "הדגש שינויים" checkbox (checked by default) sends

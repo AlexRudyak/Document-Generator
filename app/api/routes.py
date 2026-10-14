@@ -276,10 +276,17 @@ def generate_document():
         parent_doc = db.session.get(Document, parent_id)
         if parent_doc:
             unique_identifier = parent_doc.unique_identifier
-            revision_number = parent_doc.revision_number + 1
+            # The parent may be an older revision (re-edited from history);
+            # number and diff against the newest revision of the lineage so a
+            # branch never collides with an existing revision.
+            latest_doc = (Document.query
+                          .filter_by(unique_identifier=unique_identifier)
+                          .order_by(Document.revision_number.desc(), Document.id.desc())
+                          .first()) or parent_doc
+            revision_number = latest_doc.revision_number + 1
             doc_num = parent_doc.document_number
             if data.get('highlight_changes', True):
-                old_content = json.loads(parent_doc.content)
+                old_content = json.loads(latest_doc.content)
                 content_list = calculate_diff(old_content, content_list)
             # Inherit header logos from the parent unless this revision overrides.
             logo_left_path = logo_left_path or parent_doc.logo_left_path
