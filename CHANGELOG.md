@@ -4,6 +4,15 @@ Notable changes to this project. Earlier releases (v0.2.6 and before) are
 documented on the [GitHub Releases](https://github.com/AlexRudyak/Document-Generator/releases)
 page.
 
+## [0.4.1] - 2026-10-14
+
+### Fixed
+
+- **Duplicate revision numbers.** Re-editing an older revision from the history
+  page (e.g. Rev 1 when Rev 2 already exists) no longer creates a second Rev 2.
+  The new revision takes the next free number in the document's lineage, and
+  "highlight changes" compares against that newest revision.
+
 ## [0.4.0] - 2026-10-06
 
 ### Added
