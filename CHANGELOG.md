@@ -4,6 +4,17 @@ Notable changes to this project. Earlier releases (v0.2.6 and before) are
 documented on the [GitHub Releases](https://github.com/AlexRudyak/Document-Generator/releases)
 page.
 
+## [0.4.2] - 2026-11-23
+
+### Fixed
+
+- **Windows .exe failed to start.** The packaged app could crash on launch with
+  `ModuleNotFoundError: sqlalchemy.util._collection_cy` (SQLAlchemy 2.1's
+  compiled helper modules were not bundled). The build now collects
+  SQLAlchemy, Flask-SQLAlchemy, marshmallow and Pillow in full. The packaged
+  build was verified end to end (all block types, images, logos, signature,
+  watermark, revisions, templates) without Python installed.
+
 ## [0.4.1] - 2026-10-14
 
 ### Fixed
