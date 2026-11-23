@@ -22,7 +22,7 @@ binaries = []
 hiddenimports = ['waitress']
 
 # Third-party packages that ship data files / native extensions.
-for pkg in ('reportlab', 'bidi', 'sqlalchemy', 'flask_sqlalchemy', 'marshmallow', 'PIL'):
+for pkg in ('reportlab', 'bidi', 'sqlalchemy', 'flask_sqlalchemy', 'marshmallow', 'PIL', 'pygments'):
     pkg_datas, pkg_binaries, pkg_hidden = collect_all(pkg)
     datas += pkg_datas
     binaries += pkg_binaries
