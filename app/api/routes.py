@@ -179,6 +179,7 @@ def get_document(doc_id):
         "logo_right_path": d.logo_right_path,
         "contact_details": json.loads(d.contact_details) if d.contact_details else None,
         "watermark": d.watermark,
+        "table_list": bool(d.table_list),
         # Browser URLs for editor previews (None if not web-served).
         "signature_url": upload_url(os.path.basename(d.signature_path)) if d.signature_path else None,
         "logo_left_url": upload_url(os.path.basename(d.logo_left_path)) if d.logo_left_path else None,
@@ -205,6 +206,7 @@ def download_document_pdf(doc_id):
         logo_right_path=d.logo_right_path,
         contact_details=json.loads(d.contact_details) if d.contact_details else None,
         watermark=d.watermark,
+        table_list=bool(d.table_list),
     )
     suffix = '' if keep_highlight else '_clean'
     return send_file(
@@ -264,6 +266,7 @@ def generate_document():
     contact_details = [r for r in (data.get('contact_details') or [])
                        if (r.get('label') or '').strip() or (r.get('value') or '').strip()] or None
     watermark = (data.get('watermark') or '').strip()[:60] or None
+    table_list = bool(data.get('table_list'))
     # Trim to the unique_identifier column width (VARCHAR(36)) to avoid silent
     # truncation / driver errors on very long custom IDs.
     custom_doc_id = (data.get('custom_doc_id') or '').strip()[:36] or None
@@ -303,6 +306,7 @@ def generate_document():
         logo_right_path=logo_right_path,
         contact_details=json.dumps(contact_details, ensure_ascii=False) if contact_details else None,
         watermark=watermark,
+        table_list=table_list,
         content=json.dumps(content_list, ensure_ascii=False)
     )
     db.session.add(doc)
@@ -310,7 +314,8 @@ def generate_document():
 
     pdf_bytes = generate_pdf(doc_num, content_list, classification, unique_identifier, revision_number,
                              signature_path, signature_text=signature_text, logo_left_path=logo_left_path,
-                             logo_right_path=logo_right_path, contact_details=contact_details, watermark=watermark)
+                             logo_right_path=logo_right_path, contact_details=contact_details, watermark=watermark,
+                             table_list=table_list)
     
     return send_file(
         io.BytesIO(pdf_bytes),

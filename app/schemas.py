@@ -5,7 +5,13 @@ template content and document content, and is what gets serialized into
 ``Template.content`` / ``Document.content``.
 """
 
-from marshmallow import Schema, fields, validate, ValidationError
+from marshmallow import Schema, fields, validate, validates_schema, ValidationError
+
+from app.code_languages import CODE_LANGUAGES
+
+# Generous cap for one code block; code is the only block type whose text may
+# contain angle brackets, so bound it explicitly.
+MAX_CODE_LENGTH = 50000
 
 
 def _reject_html(value):
@@ -21,13 +27,34 @@ class ContactRowSchema(Schema):
 
 
 class BlockSchema(Schema):
-    type = fields.String(required=True, validate=validate.OneOf(["title", "header", "paragraph", "table", "image", "list_ordered", "list_unordered"]))
+    type = fields.String(required=True, validate=validate.OneOf(["title", "header", "paragraph", "table", "image", "list_ordered", "list_unordered", "code"]))
     # First line of defence against injection: no angle brackets in any user
-    # text (see _reject_html). The PDF engine also html.escapes everything
-    # downstream. Length validation removed for image b64 or empty tables.
-    text = fields.String(required=True, validate=_reject_html)
+    # text (see _reject_html, applied in ``_check_text``). The PDF engine also
+    # html.escapes everything downstream. Length validation removed for image
+    # b64 or empty tables. ``code`` blocks are exempt from the bracket check
+    # (source code is full of ``<`` / ``>``): they are drawn verbatim with
+    # ``drawString`` by ``code_service`` and never parsed as Paragraph markup.
+    text = fields.String(required=True)
     level = fields.Integer(required=False)
     image_name = fields.String(required=False, allow_none=True)
+    # Optional table caption (``table`` blocks only).
+    caption = fields.String(required=False, allow_none=True, validate=_reject_html)
+    # Only meaningful for ``code`` blocks; a key of ``CODE_LANGUAGES``.
+    language = fields.String(required=False, allow_none=True,
+                             validate=validate.OneOf(list(CODE_LANGUAGES)))
+
+    @validates_schema
+    def _check_text(self, data, **kwargs):
+        text = data.get('text')
+        if data.get('type') == 'code':
+            if text is not None and len(text) > MAX_CODE_LENGTH:
+                raise ValidationError(
+                    f"Code is too long (max {MAX_CODE_LENGTH} characters).", 'text')
+            return
+        try:
+            _reject_html(text)
+        except ValidationError as err:
+            raise ValidationError(err.messages, 'text')
 
 class TemplateSchema(Schema):
     name = fields.String(required=True, validate=[validate.Length(min=1, max=100), _reject_html])
@@ -53,4 +80,6 @@ class DocumentSchema(Schema):
     custom_doc_id = fields.String(required=False, allow_none=True, validate=_reject_html)
     # Whether a revision's changed blocks get a yellow diff highlight against
     # the parent; irrelevant (ignored) when there's no parent_document_id.
+    # Add a "list of tables" page (linked entries) after the contents page.
+    table_list = fields.Boolean(required=False, allow_none=True, load_default=None)
     highlight_changes = fields.Boolean(required=False, allow_none=True, load_default=True)

@@ -22,7 +22,8 @@ def calculate_diff(old_blocks, new_blocks):
         b_text = new_block.get("text")
         if idx < len(old_blocks):
             old_b = old_blocks[idx]
-            if old_b.get("type") != b_type or old_b.get("text") != b_text:
+            if (old_b.get("type") != b_type or old_b.get("text") != b_text
+                    or old_b.get("language") != new_block.get("language")):
                 new_block["_highlight"] = True
         else:
             new_block["_highlight"] = True

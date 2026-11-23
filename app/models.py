@@ -42,6 +42,8 @@ class Document(db.Model):
     contact_details = db.Column(db.Text, nullable=True)
     # Optional diagonal watermark text drawn on every page (e.g. "טיוטה").
     watermark = db.Column(db.String(60), nullable=True)
+    # Optional "list of tables" (like the list of figures) after the contents page.
+    table_list = db.Column(db.Boolean, nullable=True)
     content = db.Column(db.Text, nullable=False)  # JSON array of block dicts
     created_date = db.Column(db.DateTime, default=_utcnow)
 

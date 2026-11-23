@@ -33,7 +33,7 @@ to reorder RTL text for ReportLab, which has no native BiDi support.
 
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, PageBreak, Image, Table, TableStyle,
-    HRFlowable, KeepTogether, Flowable,
+    HRFlowable, KeepTogether, Flowable, CondPageBreak,
 )
 from reportlab.platypus.tableofcontents import TableOfContents
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -55,6 +55,7 @@ import tempfile
 from PIL import Image as PILImage
 
 from paths import resource_path
+from app.services.code_service import build_code_flowable
 
 # --- Modern visual theme -----------------------------------------------------
 # A restrained slate/indigo palette used consistently across the cover page,
@@ -323,6 +324,12 @@ class MyDocTemplate(SimpleDocTemplate):
                 key = f"BM_{self.bookmark_counter}"
                 self._record_bookmark(key, flowable)
                 self.notify('TOFEntry', (0, text, self.page, key))
+            elif getattr(flowable, 'style', None) and flowable.style.name == 'TableCaption_Hidden':
+                self.bookmark_counter += 1
+                text = flowable.getPlainText()
+                key = f"BM_{self.bookmark_counter}"
+                self._record_bookmark(key, flowable)
+                self.notify('TOTEntry', (0, text, self.page, key))
 
 
 class RTLTableOfContents(TableOfContents):
@@ -401,6 +408,12 @@ class RTLTableOfContents(TableOfContents):
 class RTLTableOfFigures(RTLTableOfContents):
     def notify(self, kind, stuff):
         if kind == 'TOFEntry':
+            self.addEntry(*stuff)
+
+class RTLTableOfTables(RTLTableOfContents):
+    """List of tables: same drawing as the list of figures, fed by ``TOTEntry``."""
+    def notify(self, kind, stuff):
+        if kind == 'TOTEntry':
             self.addEntry(*stuff)
 
 # (regular, bold) TTF candidates that can render Hebrew glyphs, most preferred
@@ -590,7 +603,7 @@ def _draw_watermark(canv, text, font_name):
 
 def generate_pdf(document_number, content_blocks, classification=None, unique_identifier='', revision_number=1,
                  signature_path=None, signature_text=None, logo_left_path=None, logo_right_path=None,
-                 contact_details=None, watermark=None):
+                 contact_details=None, watermark=None, table_list=False):
     """Render ``content_blocks`` to PDF bytes.
 
     Parameters mirror the persisted ``Document`` row. ``content_blocks`` is the
@@ -629,6 +642,17 @@ def generate_pdf(document_number, content_blocks, classification=None, unique_id
     has_headers = any(b.get("type") == "header" for b in content_blocks)
     has_figures = any(b.get("type") == "image" and b.get("text") and os.path.exists(b["text"])
                       for b in content_blocks)
+
+    def _parse_table(raw):
+        """Rows of a table block's JSON text, or None when it isn't a usable table."""
+        try:
+            rows = json.loads(raw)
+        except (TypeError, ValueError):
+            return None
+        return rows if isinstance(rows, list) and rows and all(isinstance(r, list) for r in rows) else None
+
+    has_tables_list = bool(table_list) and any(
+        b.get("type") == "table" and _parse_table(b.get("text")) for b in content_blocks)
 
     story = []
 
@@ -670,7 +694,18 @@ def generate_pdf(document_number, content_blocks, classification=None, unique_id
                                           alignment=TA_RIGHT)]
         story.append(tof)
 
-    if has_headers or has_figures:
+    # --- List of tables (optional; only if the document contains tables) ---
+    if has_tables_list:
+        if has_figures:
+            story.append(Spacer(1, 0.4 * inch))
+        story.extend(section_heading("רשימת טבלאות"))
+        tot = RTLTableOfTables()
+        tot.levelStyles = [ParagraphStyle(fontName=font_name, fontSize=11, name='TOTLevel', rightIndent=0,
+                                          spaceBefore=1, spaceAfter=1, leading=12, textColor=MUTED,
+                                          alignment=TA_RIGHT)]
+        story.append(tot)
+
+    if has_headers or has_figures or has_tables_list:
         story.append(PageBreak())
 
     # Heading counters per depth (levels 0-5), running ordered-list index, and a
@@ -678,6 +713,7 @@ def generate_pdf(document_number, content_blocks, classification=None, unique_id
     counters = [0] * 6
     ordered_list_count = 0
     image_count = 0
+    table_count = 0
     last_type = None
 
     for block in content_blocks:
@@ -816,9 +852,16 @@ def generate_pdf(document_number, content_blocks, classification=None, unique_id
             inner_table.hAlign = 'CENTER'
             story.append(inner_table)
             story.append(Spacer(1, 12))
+        elif b_type == "code":
+            # Always LTR, drawn verbatim (never parsed as Paragraph markup).
+            story.append(build_code_flowable(text or '', block.get('language'),
+                                             font_name, highlighted=is_highlighted))
+            story.append(Spacer(1, 12))
         elif b_type == "table":
             try:
                 table_data = json.loads(text)
+                if _parse_table(text) is None:
+                    raise ValueError('not a table')
                 header_cell = ParagraphStyle(name='THd', fontName=font_bold, fontSize=10,
                                              textColor=colors.white, alignment=TA_RIGHT, leading=13)
                 body_cell = ParagraphStyle(name='TCl', fontName=font_name, fontSize=10,
@@ -828,7 +871,7 @@ def generate_pdf(document_number, content_blocks, classification=None, unique_id
                      for cell in reversed(row)]
                     for r, row in enumerate(table_data)
                 ]
-                t = Table(display_data, hAlign='RIGHT')
+                t = Table(display_data, hAlign='CENTER')
                 ts = TableStyle([
                     ('BACKGROUND', (0, 0), (-1, 0), ACCENT_DARK),
                     ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, ZEBRA]),
@@ -845,7 +888,23 @@ def generate_pdf(document_number, content_blocks, classification=None, unique_id
                 if is_highlighted:
                     ts.add('BOX', (0, 0), (-1, -1), 1.2, ACCENT)
                 t.setStyle(ts)
+                t.spaceBefore = 12      # air under a heading/paragraph; dropped at a page top
+                table_count += 1
+                table_caption = (block.get('caption') or '').strip()
+                caption_text = f"טבלה {table_count}" + (f" - {table_caption}" if table_caption else "")
+                # Keep the caption with the start of its table.
+                story.append(CondPageBreak(1.6 * inch))
+                if table_list:
+                    # Zero-size marker: afterFlowable turns it into a list-of-tables entry.
+                    story.append(Paragraph(rtl_markup(caption_text), ParagraphStyle(
+                        'TableCaption_Hidden', fontName=font_name, fontSize=0, leading=0,
+                        spaceBefore=0, spaceAfter=0, textColor=colors.white)))
                 story.append(t)
+                # Caption sits below the table, like figure captions.
+                if table_caption or table_list:
+                    story.append(Paragraph(rtl_markup(caption_text), ParagraphStyle(
+                        'TableCaption', fontName=font_name, fontSize=9, textColor=MUTED,
+                        alignment=TA_CENTER, leading=12, spaceBefore=6)))
                 story.append(Spacer(1, 14))
             except Exception:
                 pass

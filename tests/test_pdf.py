@@ -118,3 +118,14 @@ def test_rtl_markup_keeps_line_order_and_bidi():
 
     # A mixed line is reordered as one visual line (no <br/> inserted).
     assert "<br/>" not in rtl_markup("שלום world שלום")
+
+
+def test_table_with_empty_cells_renders():
+    # The visual table editor saves every cell, including blank ones.
+    import json
+    import fitz
+    rows = [["שם", "גיל", ""], ["דני", "30", ""], ["", "", ""]]
+    pdf = generate_pdf("IT-T1", [{"type": "table", "text": json.dumps(rows)}])
+    text = ''.join(p.get_text() for p in fitz.open(stream=pdf, filetype='pdf'))
+    assert 'דני' in text or 'ינד' in text   # Hebrew may be stored in visual order
+    assert '30' in text

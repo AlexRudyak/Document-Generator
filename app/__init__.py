@@ -24,7 +24,9 @@ def create_app(config_class=Config):
 
     @app.route('/')
     def index():
-        return render_template('index.html')
+        from app.code_languages import CODE_LANGUAGES, DEFAULT_CODE_LANGUAGE
+        return render_template('index.html', code_languages=CODE_LANGUAGES,
+                               default_code_language=DEFAULT_CODE_LANGUAGE)
 
     @app.route('/history')
     def history():
@@ -65,6 +67,7 @@ def _apply_lightweight_migrations():
             'contact_details': 'TEXT',
             'watermark': 'VARCHAR(60)',
             'signature_text': 'VARCHAR(120)',
+            'table_list': 'BOOLEAN',
         },
     }
     inspector = inspect(db.engine)
