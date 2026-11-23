@@ -9,8 +9,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('add-header-btn').addEventListener('click', () => addBlock('header'));
     document.getElementById('add-paragraph-btn').addEventListener('click', () => addBlock('paragraph'));
-    document.getElementById('add-table-btn').addEventListener('click', () => addBlock('table'));
+    document.getElementById('add-table-btn').addEventListener('click', () => addTableViaPrompt(null));
     document.getElementById('add-image-btn').addEventListener('click', () => addBlock('image'));
+    document.getElementById('add-code-btn').addEventListener('click', () => addBlock('code'));
+    initHoverInserter();
     
     document.getElementById('save-template-btn').addEventListener('click', saveTemplate);
     document.getElementById('generate-btn').addEventListener('click', generateDocument);
@@ -99,6 +101,8 @@ const OPTIONAL_SETTINGS = [
     { key: 'logo_right',     toggle: 'logo-right-toggle', control: 'logo-right-control', hidden: 'logo-right-path',  status: 'logo-right-status', thumb: 'logo-right-thumb' },
     { key: 'logo_left',      toggle: 'logo-left-toggle',  control: 'logo-left-control',  hidden: 'logo-left-path',   status: 'logo-left-status',  thumb: 'logo-left-thumb'  },
     { key: 'contact',        toggle: 'contact-toggle',    control: 'contact-control',    rows: 'contact-rows' },
+    // A plain on/off flag: no revealed control.
+    { key: 'table_list',     toggle: 'tl-toggle' },
 ];
 
 // Paint (or clear) the mini page-preview corner for a logo setting.
@@ -118,7 +122,7 @@ function syncSetting(s, hardReset = false) {
     const cb = document.getElementById(s.toggle);
     const on = cb.checked;
     cb.closest('.setting').classList.toggle('is-on', on);
-    document.getElementById(s.control).hidden = !on;
+    if (s.control) document.getElementById(s.control).hidden = !on;
     if (!on && s.hidden && (hardReset || !s.persistOnOff)) {
         document.getElementById(s.hidden).value = '';
         const st = document.getElementById(s.status);
@@ -341,10 +345,11 @@ let blockIdSeq = 0;   // unique per-block DOM-id suffix (see addBlock's image br
 const typeLabels = {
     'header': 'כותרת',
     'paragraph': 'טקסט',
-    'table': 'טבלה (JSON)',
+    'table': 'טבלה',
     'list_unordered': 'תבליטים',
     'list_ordered': 'רשימה ממוספרת',
-    'image': 'תמונה'
+    'image': 'תמונה',
+    'code': 'קוד'
 };
 
 function updateNumbering() {
@@ -427,12 +432,14 @@ function updateNumbering() {
     });
 }
 
-function addBlock(type, text = '', level = -1, imageName = '') {
+function addBlock(type, text = '', level = -1, imageName = '', language = '', caption = '') {
     const container = document.getElementById('blocks-container');
     const blockUid = `block-${++blockIdSeq}`;
 
     if (level === -1) {
-        if (type.startsWith('list')) {
+        // Content added under a sub-header (1.1, 1.2 …) sits at that header's
+        // level, not back at the top level. A new header keeps level 0.
+        if (type !== 'header') {
             const blocks = container.querySelectorAll('.block');
             if (blocks.length > 0) {
                 const lastBlock = blocks[blocks.length - 1];
@@ -532,6 +539,41 @@ function addBlock(type, text = '', level = -1, imageName = '') {
             }
         };
         input.append(fileIn, statusSpan, nameIn, hiddenPath);
+    } else if (type === 'table') {
+        input = createTableEditor(parseTableText(text), caption);
+    } else if (type === 'code') {
+        // Language dropdown above a monospace, LTR textarea. The language
+        // list comes from the server (window.CODE_LANGUAGES, see index.html).
+        input = document.createElement('div');
+        input.className = 'code-input-wrapper';
+
+        const langSelect = document.createElement('select');
+        langSelect.className = 'code-lang-select';
+        langSelect.title = 'שפת תכנות';
+        (window.CODE_LANGUAGES || []).forEach(([key, name]) => {
+            const opt = document.createElement('option');
+            opt.value = key;
+            opt.textContent = name;
+            langSelect.append(opt);
+        });
+        langSelect.value = language || window.DEFAULT_CODE_LANGUAGE || 'text';
+        if (!langSelect.value) langSelect.selectedIndex = 0;
+
+        const codeArea = document.createElement('textarea');
+        codeArea.className = 'block-input code-textarea';
+        codeArea.dir = 'ltr';
+        codeArea.spellcheck = false;
+        codeArea.placeholder = 'הדבק או הקלד קוד כאן…';
+        codeArea.value = text;
+        // Tab inserts indentation instead of leaving the field.
+        codeArea.addEventListener('keydown', (e) => {
+            if (e.key === 'Tab' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                e.preventDefault();
+                const { selectionStart: a, selectionEnd: b } = codeArea;
+                codeArea.setRangeText('    ', a, b, 'end');
+            }
+        });
+        input.append(langSelect, codeArea);
     } else {
         input = document.createElement(type === 'header' ? 'input' : 'textarea');
         input.className = 'block-input';
@@ -647,6 +689,320 @@ function addBlock(type, text = '', level = -1, imageName = '') {
     updateNumbering();
 }
 
+// --- Tables ---------------------------------------------------------------
+// A table block is edited as a grid of inputs but still stored as the same JSON
+// string of rows (`[["a","b"],["c","d"]]`) the PDF engine and old documents use.
+// Column 0 is the right-most column (the page is RTL), matching the PDF.
+const TABLE_MAX_ROWS = 100;
+const TABLE_MAX_COLS = 10;
+const TABLE_CELL_MIN = 100;   // px; keep in sync with .table-grid td in style.css
+const TABLE_CTL_W = 28;       // px; width of the row-delete / spacer columns
+
+function emptyTableJson(rows, cols) {
+    return JSON.stringify(Array.from({ length: rows }, () => Array(cols).fill('')));
+}
+
+function parseTableText(text) {
+    try {
+        const v = JSON.parse(text);
+        if (Array.isArray(v) && v.length && v.every(Array.isArray) && v.some(r => r.length)) {
+            const width = Math.max(...v.map(r => r.length));
+            return v.map(r => Array.from({ length: width }, (_, i) => (r[i] == null ? '' : String(r[i]))));
+        }
+    } catch (e) { /* not JSON: fall through to a small blank grid */ }
+    return [['', ''], ['', '']];
+}
+
+function el(tag, className, text) {
+    const e = document.createElement(tag);
+    if (className) e.className = className;
+    if (text) e.textContent = text;
+    return e;
+}
+
+// The grid editor inside a table block. `wrap.readRows()` returns the cells.
+function createTableEditor(initialRows, caption = '') {
+    const wrap = el('div', 'table-editor');
+    const capIn = el('input', 'table-caption-input');
+    capIn.type = 'text';
+    capIn.placeholder = 'כיתוב לטבלה (אופציונלי)';
+    capIn.value = caption;
+    capIn.dir = 'auto';
+    const scroll = el('div', 'table-scroll');
+    const table = el('table', 'table-grid');
+    scroll.append(table);
+    let data = initialRows;
+
+    const readRows = () => Array.from(table.querySelectorAll('tr.t-row'))
+        .map(tr => Array.from(tr.querySelectorAll('input.table-cell')).map(i => i.value));
+    wrap.readRows = readRows;
+
+    const bar = el('div', 'table-toolbar');
+    const addRowBtn = el('button', 'quick-add-btn', '+ שורה');
+    const addColBtn = el('button', 'quick-add-btn', '+ עמודה');
+    addRowBtn.type = addColBtn.type = 'button';
+    bar.append(addRowBtn, addColBtn);
+
+    function render(focusAt) {
+        table.innerHTML = '';
+        const cols = data[0].length;
+        // Fixed layout: the two side columns stay 28px, cells share the rest
+        // evenly; many columns scroll sideways instead of squashing.
+        table.style.minWidth = (cols * TABLE_CELL_MIN + 2 * TABLE_CTL_W) + 'px';
+        data.forEach((row, r) => {
+            const tr = el('tr', 't-row');
+            // Empty leading cell mirrors the delete column so the grid itself is centred.
+            tr.append(el('td', 't-ctl t-spacer'));
+            row.forEach((val, c) => {
+                const td = el('td', r === 0 ? 't-head' : '');
+                const inp = el('input', 'table-cell');
+                inp.type = 'text';
+                inp.value = val;
+                inp.dir = 'auto';
+                inp.setAttribute('aria-label', `שורה ${r + 1}, עמודה ${c + 1}`);
+                // Enter moves down the column, like a spreadsheet.
+                inp.addEventListener('keydown', (e) => {
+                    if (e.key !== 'Enter') return;
+                    e.preventDefault();
+                    const next = table.querySelectorAll('tr.t-row')[r + 1];
+                    if (next) next.querySelectorAll('input.table-cell')[c].focus();
+                    else addRow();
+                });
+                td.append(inp);
+                tr.append(td);
+            });
+            const ctl = el('td', 't-ctl');
+            const del = el('button', 't-del', '✕');
+            del.type = 'button';
+            del.title = 'מחק שורה';
+            del.disabled = data.length === 1;
+            del.onclick = () => { data = readRows(); data.splice(r, 1); render(); };
+            ctl.append(del);
+            tr.append(ctl);
+            table.append(tr);
+        });
+        const foot = el('tr', 't-foot');
+        foot.append(el('td', 't-ctl t-spacer'));
+        for (let c = 0; c < cols; c++) {
+            const td = el('td', 't-ctl');
+            const del = el('button', 't-del', '✕');
+            del.type = 'button';
+            del.title = 'מחק עמודה';
+            del.disabled = cols === 1;
+            del.onclick = () => { data = readRows(); data.forEach(row => row.splice(c, 1)); render(); };
+            td.append(del);
+            foot.append(td);
+        }
+        foot.append(el('td'));
+        table.append(foot);
+        if (focusAt) {
+            const cell = table.querySelectorAll('tr.t-row')[focusAt[0]]
+                .querySelectorAll('input.table-cell')[focusAt[1]];
+            if (cell) cell.focus();
+        }
+        addRowBtn.disabled = data.length >= TABLE_MAX_ROWS;
+        addColBtn.disabled = cols >= TABLE_MAX_COLS;
+    }
+
+    function addRow() {
+        if (data.length >= TABLE_MAX_ROWS) return;
+        data = readRows();
+        data.push(Array(data[0].length).fill(''));
+        render([data.length - 1, 0]);
+    }
+    function addCol() {
+        if (data[0].length >= TABLE_MAX_COLS) return;
+        data = readRows();
+        data.forEach(row => row.push(''));
+        render([0, data[0].length - 1]);
+    }
+    addRowBtn.onclick = addRow;
+    addColBtn.onclick = addCol;
+
+    wrap.append(scroll, capIn, bar);     // caption sits below the table
+    render();
+    return wrap;
+}
+
+// Popup asking for the table size, with a live preview of the grid it will
+// create. Resolves to {rows, cols}, or null when cancelled.
+function promptTableSize() {
+    return new Promise((resolve) => {
+        const backdrop = el('div', 'modal-backdrop');
+        const dlg = el('form', 'modal');
+        dlg.setAttribute('role', 'dialog');
+        dlg.setAttribute('aria-modal', 'true');
+        dlg.append(el('h3', 'modal-title', 'הוספת טבלה'));
+
+        const field = (label, max, value) => {
+            const wrapper = el('label', 'modal-field');
+            wrapper.append(el('span', '', label));
+            const inp = el('input');
+            inp.type = 'number';
+            inp.min = 1;
+            inp.max = max;
+            inp.value = value;
+            inp.required = true;
+            wrapper.append(inp);
+            return { wrapper, inp };
+        };
+        const rowsF = field('שורות', TABLE_MAX_ROWS, 3);
+        const colsF = field('עמודות', TABLE_MAX_COLS, 3);
+        const fields = el('div', 'modal-fields');
+        fields.append(rowsF.wrapper, colsF.wrapper);
+
+        const preview = el('div', 'table-preview');
+        const clamp = (inp, max) => Math.min(max, Math.max(1, parseInt(inp.value, 10) || 1));
+        const redraw = () => {
+            const r = clamp(rowsF.inp, TABLE_MAX_ROWS), c = clamp(colsF.inp, TABLE_MAX_COLS);
+            const t = el('table', 'table-grid preview-grid');
+            for (let i = 0; i < Math.min(r, 8); i++) {
+                const tr = el('tr');
+                for (let j = 0; j < c; j++) tr.append(el('td', i === 0 ? 't-head' : ''));
+                t.append(tr);
+            }
+            preview.replaceChildren(t);
+            if (r > 8) preview.append(el('div', 'preview-more', `… ועוד ${r - 8} שורות`));
+        };
+        rowsF.inp.oninput = colsF.inp.oninput = redraw;
+        redraw();
+
+        const actions = el('div', 'modal-actions');
+        const ok = el('button', 'btn-primary', 'צור טבלה');
+        ok.type = 'submit';
+        const cancel = el('button', 'btn-secondary', 'ביטול');
+        cancel.type = 'button';
+        actions.append(ok, cancel);
+        dlg.append(fields, preview, actions);
+        backdrop.append(dlg);
+        document.body.append(backdrop);
+
+        const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); close(null); } };
+        const close = (result) => {
+            document.removeEventListener('keydown', onKey, true);
+            backdrop.remove();
+            resolve(result);
+        };
+        document.addEventListener('keydown', onKey, true);
+        cancel.onclick = () => close(null);
+        backdrop.addEventListener('mousedown', (e) => { if (e.target === backdrop) close(null); });
+        dlg.onsubmit = (e) => {
+            e.preventDefault();
+            close({ rows: clamp(rowsF.inp, TABLE_MAX_ROWS), cols: clamp(colsF.inp, TABLE_MAX_COLS) });
+        };
+        rowsF.inp.focus();
+        rowsF.inp.select();
+    });
+}
+
+// Toolbar / hover entry point for a new table: ask for the size, then insert.
+function addTableViaPrompt(beforeBlock) {
+    return promptTableSize().then((size) => {
+        if (size) insertBlockBefore('table', beforeBlock || null, emptyTableJson(size.rows, size.cols));
+    });
+}
+
+// --- Hover inserter -----------------------------------------------------------
+// Hovering the gap between two blocks (or above the first one) reveals a small
+// "+ כותרת / פסקה / תמונה / קוד" strip that inserts a new block right there,
+// instead of only at the end of the document. One floating element, positioned
+// from live DOM geometry, so it never touches the block list itself.
+const HOVER_INSERT_TYPES = [
+    ['header', '+ כותרת'],
+    ['paragraph', '+ פסקה'],
+    ['table', '+ טבלה'],
+    ['image', '+ תמונה'],
+    ['code', '+ קוד'],
+];
+const HOVER_INSERT_REACH = 18;   // px from a gap's centre line that still triggers it
+
+function insertBlockBefore(type, beforeBlock, text = '') {
+    const container = document.getElementById('blocks-container');
+    // Take the level of the block it lands under, so something inserted below
+    // a sub-header (or a new sibling sub-header) stays at that depth.
+    const above = beforeBlock ? beforeBlock.previousElementSibling : container.lastElementChild;
+    const level = above ? (parseInt(above.dataset.level) || 0) : 0;
+    addBlock(type, text, level);
+    const newBlock = container.lastElementChild;     // addBlock appends
+    if (beforeBlock && beforeBlock !== newBlock) container.insertBefore(newBlock, beforeBlock);
+    updateNumbering();
+    newBlock.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    const field = newBlock.querySelector('.table-cell, .block-input:not([type="hidden"]), input[type="file"]');
+    if (field) field.focus({ preventScroll: true });
+}
+
+function initHoverInserter() {
+    const container = document.getElementById('blocks-container');
+
+    // The bottom "add" toolbar only bootstraps an empty document; once any
+    // block exists the hover inserter covers every position, so hide it.
+    const toolbar = document.getElementById('add-toolbar');
+    const syncToolbar = () => {
+        toolbar.hidden = !!container.querySelector(':scope > .block');
+    };
+    new MutationObserver(syncToolbar).observe(container, { childList: true });
+    syncToolbar();
+    const bar = document.createElement('div');
+    bar.id = 'block-inserter';
+    bar.hidden = true;
+    let target = null;      // block the new one goes before; null = at the end
+
+    HOVER_INSERT_TYPES.forEach(([type, label]) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'inserter-btn';
+        btn.textContent = label;
+        btn.onclick = () => {
+            const before = target;
+            bar.hidden = true;
+            if (type === 'table') addTableViaPrompt(before);
+            else insertBlockBefore(type, before);
+        };
+        bar.append(btn);
+    });
+    document.body.append(bar);
+
+    // Gaps: before each top-level visible block (grouped paragraph+list boxes
+    // count as one), plus after the last visible block.
+    function gaps() {
+        const visible = Array.from(container.querySelectorAll(':scope > .block'))
+            .filter(b => b.offsetParent !== null);
+        const out = [];
+        visible.forEach((b, i) => {
+            if (b.dataset.groupWithPrev === 'true') return;
+            const r = b.getBoundingClientRect();
+            const prev = visible[i - 1];
+            const y = prev ? (prev.getBoundingClientRect().bottom + r.top) / 2 : r.top - 8;
+            out.push({ y, before: b });
+        });
+        const last = visible[visible.length - 1];
+        if (last) out.push({ y: last.getBoundingClientRect().bottom + 8, before: null });
+        return out;
+    }
+
+    function hide() { bar.hidden = true; }
+
+    document.addEventListener('mousemove', (e) => {
+        if (bar.contains(e.target)) return;                 // keep it while using it
+        if (document.querySelector('.block.dragging')) return hide();
+        const box = container.getBoundingClientRect();
+        if (e.clientX < box.left || e.clientX > box.right ||
+            e.clientY < box.top - 20 || e.clientY > box.bottom + 20) return hide();
+        let best = null;
+        for (const g of gaps()) {
+            const d = Math.abs(e.clientY - g.y);
+            if (d <= HOVER_INSERT_REACH && (!best || d < best.d)) best = { d, g };
+        }
+        if (!best) return hide();
+        target = best.g.before;
+        bar.hidden = false;
+        bar.style.top = best.g.y + 'px';
+        bar.style.left = (box.left + box.width / 2) + 'px';
+    });
+    document.addEventListener('scroll', hide, true);
+    document.addEventListener('mouseleave', hide);
+}
+
 function getBlocksData() {
     const data = [];
     const titleText = document.getElementById('doc-title').value.trim();
@@ -666,6 +1022,23 @@ function getBlocksData() {
             const imgName = nameElem ? nameElem.value.trim() : '';
             if (text) {
                 data.push({ type, text, image_name: imgName, level });
+            }
+        } else if (type === 'table') {
+            const editor = b.querySelector('.table-editor');
+            const rows = editor ? editor.readRows().map(r => r.map(c => c.trim())) : [];
+            if (rows.some(r => r.some(c => c))) {
+                const capElem = b.querySelector('.table-caption-input');
+                const caption = capElem ? capElem.value.trim() : '';
+                data.push(caption ? { type, text: JSON.stringify(rows), caption, level }
+                                  : { type, text: JSON.stringify(rows), level });
+            }
+        } else if (type === 'code') {
+            const codeElem = b.querySelector('.code-textarea');
+            const langElem = b.querySelector('.code-lang-select');
+            // Keep leading indentation: only trim blank lines around the code.
+            const code = codeElem ? codeElem.value.replace(/^(?:[ \t]*\r?\n)+|\s+$/g, '') : '';
+            if (code) {
+                data.push({ type, text: code, language: langElem ? langElem.value : 'text', level });
             }
         } else {
             const textElem = b.querySelector('.block-input');
@@ -729,7 +1102,7 @@ function loadTemplate(id) {
             if (b.type === 'title') {
                 document.getElementById('doc-title').value = b.text;
             } else {
-                addBlock(b.type, b.text, b.level || 0, b.image_name || '');
+                addBlock(b.type, b.text, b.level || 0, b.image_name || '', b.language || '', b.caption || '');
             }
         });
     }
@@ -751,6 +1124,7 @@ function loadDocument(id) {
             applySetting('logo_right', d.logo_right_path, d.logo_right_url);
             applySetting('logo_left', d.logo_left_path, d.logo_left_url);
             applySetting('contact', d.contact_details);
+            applySetting('table_list', d.table_list);
             document.getElementById('blocks-container').innerHTML = '';
             document.getElementById('doc-title').value = '';
             document.getElementById('custom-doc-id').value = d.document_number;
@@ -759,7 +1133,7 @@ function loadDocument(id) {
                 if (b.type === 'title') {
                     document.getElementById('doc-title').value = b.text;
                 } else {
-                    addBlock(b.type, b.text, b.level || 0, b.image_name || '');
+                    addBlock(b.type, b.text, b.level || 0, b.image_name || '', b.language || '', b.caption || '');
                 }
             });
         });
@@ -924,6 +1298,7 @@ function generateDocument() {
         logo_right_path: document.getElementById('logo-right-path').value || null,
         logo_left_path: document.getElementById('logo-left-path').value || null,
         contact_details: document.getElementById('contact-toggle').checked ? getContactDetails() : null,
+        table_list: document.getElementById('tl-toggle').checked,
         custom_doc_id: document.getElementById('custom-doc-id').value.trim()
     };
     if (currentParentDocId) {

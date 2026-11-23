@@ -43,16 +43,20 @@
             </label>
         </div>
 
+        <section class="document-sheet" aria-label="תוכן המסמך">
+        <div class="sheet-tag">תוכן המסמך</div>
         <div id="blocks-container">
             <!-- Blocks will be added here dynamically -->
         </div>
 
-        <div class="toolbar" style="margin-bottom: 20px;">
+        <div class="toolbar" id="add-toolbar" style="margin-bottom: 20px;">
             <button id="add-header-btn" class="btn-primary">+ הוסף כותרת</button>
             <button id="add-paragraph-btn" class="btn-primary">+ הוסף פסקה</button>
             <button id="add-table-btn" class="btn-primary">+ הוסף טבלה</button>
             <button id="add-image-btn" class="btn-primary">+ הוסף תמונה</button>
+            <button id="add-code-btn" class="btn-primary">+ הוסף קוד</button>
         </div>
+        </section>
 
         <div class="settings-panel">
             <h3 class="settings-title">הגדרות מסמך</h3>
@@ -177,6 +181,20 @@
                     </div>
                 </div>
 
+                <div class="setting">
+                    <label class="toggle">
+                        <input type="checkbox" id="tl-toggle">
+                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                        <span class="toggle-label">רשימת טבלאות</span>
+                    </label>
+                    <div class="logo-preview" title="רשימת הטבלאות (עם קישורים) מופיעה בתחילת המסמך, אחרי תוכן העניינים">
+                        <div class="lp-page">
+                            <span class="lp-lines"></span>
+                        </div>
+                        <span class="lp-caption">בתחילת המסמך</span>
+                    </div>
+                </div>
+
                 <div class="setting setting-wide">
                     <label class="toggle">
                         <input type="checkbox" id="contact-toggle">
@@ -255,6 +273,11 @@
         באמצעות <a href="https://claude.com/claude-code" target="_blank" rel="noopener">Claude</a>
     </footer>
 
+    <script>
+        // [key, label] pairs, in display order (single source: app/code_languages.py).
+        window.CODE_LANGUAGES = {{ code_languages.items()|list|tojson }};
+        window.DEFAULT_CODE_LANGUAGE = {{ default_code_language|tojson }};
+    </script>
     <script src="/static/js/app.js"></script>
 </body>
 </html>
