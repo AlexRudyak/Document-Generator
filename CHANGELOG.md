@@ -6,6 +6,8 @@ page.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-23
+
 ### Added
 
 - **Code blocks.** A new "+ הוסף קוד" button, next to "add image", inserts a code
@@ -24,8 +26,14 @@ page.
   linked list of tables after the contents page. Tables are now centred, both in the
   editor and in the PDF.
 - **Insert anywhere.** Hovering the gap between two blocks (or above the first /
-  below the last) reveals a "+ כותרת / פסקה / תמונה / קוד" strip that inserts a new
+  below the last) reveals a "+ כותרת / פסקה / טבלה / תמונה / קוד" strip that inserts a new
   block at that exact spot.
+
+### Changed
+
+- **Document sheet.** The content blocks now sit inside a framed, highlighted "תוכן המסמך"
+  sheet, separate from the title/ID fields and the settings. The bottom "add" buttons
+  hide once the document has a block, since the hover strip covers every position.
 
 ### Fixed
 
