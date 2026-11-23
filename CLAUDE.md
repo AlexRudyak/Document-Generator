@@ -46,9 +46,18 @@ There is no build step for the front-end (vanilla JS/CSS served from
   JSON array of blocks. The DB does not model blocks; `schemas.BlockSchema` is
   the only contract. Keep the block `type` list in sync across `schemas.py`,
   `pdf_service.py`, and `app/static/js/app.js`.
-- **Block shape:** `{type, text, level?, image_name?}`. `text` is overloaded: for
+- **Block shape:** `{type, text, level?, image_name?, language?}`. `text` is overloaded: for
   `image` blocks it is a filesystem path; for `table` blocks it is a JSON string
-  of rows.
+  of rows; for `code` blocks it is the raw source.
+- **Code blocks.** `language` is a key of `app/code_languages.py:CODE_LANGUAGES`
+  (the single source — the schema validates against it and `/` renders the
+  editor's dropdown from it; Pygments lexer aliases). `app/services/code_service.py`
+  lexes with Pygments and draws a boxed, LTR block with `drawString` via
+  `CodeFlowable` (splittable across pages) — never through `Paragraph` markup.
+  `code` is the one block type allowed to contain `<` / `>` (`BlockSchema._check_text`
+  skips the bracket check for it). Courier is used for Latin-1; other characters
+  (e.g. Hebrew comments) fall back to the document font and go through `get_display`.
+  `pygments` is bundled via `collect_all` in `DocGenerator.spec` (lexers load lazily).
 - **Revisions, not edits.** Regenerating from `parent_document_id` inserts a new
   `Document` row sharing the parent's `unique_identifier`, with
   `revision_number + 1` — where "+ 1" is taken from the *newest* revision of that
@@ -100,6 +109,21 @@ There is no build step for the front-end (vanilla JS/CSS served from
   `{"label", "value"}` rows. Rendered by `NumberedCanvas.draw_page_number` only
   on `self._pageNumber == 1`, left-aligned below the left logo. Blank rows are
   dropped server-side; both fields go through the `<`/`>` reject check.
+- **Table editor.** `table` blocks are edited as a grid (`createTableEditor`, sized by
+  the `promptTableSize` popup) but still stored as a JSON string of rows in `text`;
+  `parseTableText` loads old JSON, `getBlocksData` serialises the grid back. Column 0
+  is the right-most (RTL), matching `pdf_service`'s `reversed(row)`.
+- **Table captions / list of tables.** `table` blocks take an optional `caption`;
+  `Document.table_list` (nullable Boolean, migrated in `_apply_lightweight_migrations`,
+  toggle `tl-toggle` in `OPTIONAL_SETTINGS`) adds a linked "רשימת טבלאות" page via
+  `RTLTableOfTables`, fed by a zero-size `TableCaption_Hidden` marker that
+  `afterFlowable` turns into a `TOTEntry` (same trick as the figure captions). A caption
+  line is drawn below a table when it has caption text *or* the list is on, so list
+  entries always match something visible. Tables are `hAlign='CENTER'`.
+- **Hover inserter.** `initHoverInserter` in `app.js` floats a single
+  `#block-inserter` strip over the gap nearest the mouse (computed from live block
+  geometry; grouped paragraph+list boxes count as one) and inserts via
+  `insertBlockBefore(type, beforeBlock)`. Add a type to `HOVER_INSERT_TYPES` to offer it.
 - **Optional settings in the editor.** `OPTIONAL_SETTINGS` in `app.js` is the
   single registry — each entry wires a toggle to a revealed control and clears
   its value when switched off. Add new optional document settings there.

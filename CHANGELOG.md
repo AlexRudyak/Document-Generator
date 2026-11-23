@@ -4,6 +4,35 @@ Notable changes to this project. Earlier releases (v0.2.6 and before) are
 documented on the [GitHub Releases](https://github.com/AlexRudyak/Document-Generator/releases)
 page.
 
+## [Unreleased]
+
+### Added
+
+- **Code blocks.** A new "+ הוסף קוד" button, next to "add image", inserts a code
+  block with a language dropdown (22 languages: Python, JavaScript, TypeScript,
+  Java, C#, C++, C, Go, Rust, PHP, Ruby, Kotlin, Swift, SQL, HTML, XML, CSS,
+  JSON, YAML, Bash, PowerShell, or plain text). The PDF shows the code in a boxed,
+  left-to-right monospace block with syntax highlighting and a language label;
+  long code wraps and flows across pages. Code may contain `<` and `>`.
+- **Visual table editor.** Adding a table now opens a popup asking for the number of
+  rows and columns (with a live preview), then creates an editable grid instead of a
+  raw JSON box. Rows and columns can be added or deleted afterwards; Enter moves down
+  a column. Tables are still stored as the same JSON rows, so existing documents and
+  templates open in the grid unchanged.
+- **Table captions and list of tables.** Each table can have an optional caption
+  (shown below it as "טבלה N - caption"), and a new "רשימת טבלאות" document setting adds a
+  linked list of tables after the contents page. Tables are now centred, both in the
+  editor and in the PDF.
+- **Insert anywhere.** Hovering the gap between two blocks (or above the first /
+  below the last) reveals a "+ כותרת / פסקה / תמונה / קוד" strip that inserts a new
+  block at that exact spot.
+
+### Fixed
+
+- **Indent of new blocks.** A paragraph, image or code block added under a sub-header
+  (1.1, 1.2 …) now sits at that sub-header's level instead of jumping back to the top
+  level; a block inserted via the hover strip takes the level of the block above it.
+
 ## [0.4.2] - 2026-11-23
 
 ### Fixed

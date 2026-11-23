@@ -48,7 +48,7 @@ block and watermark, templates you can share, and a one‑file Windows build.**
 
 | | |
 |---|---|
-| **Block editor** | Headings (6 indent levels), paragraphs, ordered / unordered lists, JSON tables, and captioned images. Drag‑and‑drop reordering, keyboard‑free indent controls. |
+| **Block editor** | Headings (6 indent levels), paragraphs, ordered / unordered lists, visual, captioned tables (pick rows × columns, fill a grid; optional list of tables), captioned images, and syntax‑highlighted code blocks (22 languages). Drag‑and‑drop reordering, keyboard‑free indent controls. |
 | **Automatic structure** | Hierarchical heading numbers (`1.` → `1.1` → `1.1.1`), a linked **Table of Contents** and **Table of Figures**, figure captions — all generated at render time. |
 | **RTL‑correct PDFs** | Text is word‑wrapped and BiDi‑reordered **per line**, so hard newlines and mixed Hebrew ↔ English come out in the right order. Custom right‑to‑left TOC/TOF renderer with dot leaders and working internal links; bundled Hebrew‑capable font. |
 | **Modern layout** | Cover page, banded headings, zebra tables, hairline figure frames, per‑page furniture (document number, revision, date, `page X of N`). |
@@ -167,7 +167,7 @@ curl -X POST http://127.0.0.1:5000/api/documents/generate \
 | `POST /api/documents/generate` | Validate, persist, and render a PDF |
 | `POST /api/upload` | Upload an image (multipart `file`) → returns a path |
 
-**Block shape:** `{"type": title|header|paragraph|table|image|list_ordered|list_unordered, "text": str, "level"?: int, "image_name"?: str}`.
+**Block shape:** `{"type": title|header|paragraph|table|image|code|list_ordered|list_unordered, "text": str, "level"?: int, "image_name"?: str, "language"?: str}`.
 For `table`, `text` is a JSON string of rows (`[["a","b"],["c","d"]]`); for `image`
 it is the path returned by `/api/upload`.
 
